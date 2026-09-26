@@ -1,58 +1,15 @@
-@extends('auth.layouts.master')
-@section('content')
-
-    <!--============================
-        BREADCRUMB START
-    ==============================-->
-    <section id="wsus__breadcrumb">
-        <div class="wsus_breadcrumb_overlay">
-            <div class="container">
-                <div class="row">
-                    <div class="col-12">
-                        <h4>forget password</h4>
-                        <ul>
-                            <li><a href="#">login</a></li>
-                            <li><a href="#">forget password</a></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-    <!--============================
-        BREADCRUMB END
-    ==============================-->
-
-
-    <!--============================
-        FORGET PASSWORD START
-    ==============================-->
-    <section id="wsus__login_register" class="mb-5">
-        <div class="container">
-            <div class="row">
-                <div class="col-xl-5 m-auto">
-                    <div class="wsus__forget_area">
-                        <span class="qiestion_icon"><i class="fal fa-question-circle"></i></span>
-                        <h4>forget password ?</h4>
-                        <p>enter the email address to register with <span>{{ $setting->name }}</span></p>
-                        <div class="wsus__login">
-                            <form method="POST" action="{{ route('password.email') }}">
-                                @csrf
-                                <div class="wsus__login_input">
-                                    <i class="fal fa-envelope"></i>
-                                    <input id="email" type="email" name="email" value="{{old('email')}}" placeholder="Your Email">
-                                </div>
-
-                                <button class="common_btn" type="submit">send</button>
-                            </form>
-                        </div>
-                        <a class="see_btn mt-4" href="{{route('login')}}">go to login</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-    <!--============================
-        FORGET PASSWORD END
-    ==============================-->
-@endsection
+<x-layouts.auth title="Reset your password">
+    <div class="grid gap-2">
+        <h1 class="h2">Reset your password</h1>
+        <p class="text-muted">Enter the email you signed up with and we’ll send you a link to choose a new password.</p>
+    </div>
+    @if (session('status'))
+        <x-alert variant="success">{{ session('status') }}</x-alert>
+    @endif
+    <form class="grid gap-5" method="POST" action="{{ route('password.email') }}">
+        @csrf
+        <x-input name="email" label="Email" type="email" autocomplete="email" placeholder="you@example.com" required autofocus/>
+        <button class="btn btn-primary btn-lg btn-block" type="submit" data-busy-label="Sending…">Email me a reset link</button>
+    </form>
+    <p class="text-center text-sm"><a class="link" href="{{ route('login') }}">Back to log in</a></p>
+</x-layouts.auth>

@@ -2,44 +2,67 @@
 
 namespace App\Http\Controllers;
 
-use Gloudemans\Shoppingcart\Facades\Cart;
+use App\Http\Requests\CartStoreRequest;
 use App\Models\Book;
+use App\Services\Cart;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class CartController extends Controller
 {
-    public function index()
+    public function index(Cart $cart): View
     {
-        $cart=Cart::content();
-        return view('components.MainViews.cart',['cart'=>$cart]);
+        return view('cart.index', [
+            'items' => $cart->items(),
+            'subtotalCents' => $cart->subtotalCents(),
+        ]);
     }
 
-    public function store(Request $request)
+    public function store(CartStoreRequest $request, Cart $cart): RedirectResponse|JsonResponse
     {
-        $book=Book::findOrFail($request->input('book_id'));
-        if($book->discount_price)
-        {
-            $price=$book->discount_price;
-        }
-        else
-        {
-            $price=$book->price;
-        }
-        Cart::add([
-            'id'=>$book->id,
-            'name'=>$book->title,
-            'price'=>$price,
-            'qty'=>$request->input('quantity'),
-            'weight' =>0,
-            'options' => ['copies_owned' =>$book->copies_owned ]]);
+        $book = Book::query()->findOrFail($request->integer('book_id'));
 
-            session()->flash('book-success-' . $book->id, 'Book added to cart successfully.');
-            return redirect()->back();
+        $result = $cart->add($book);
+
+        $message = match ($result) {
+            'added' => "Added “{$book->title}” to your cart.",
+            'exists' => "“{$book->title}” is already in your cart.",
+            'owned' => 'You already own this book. It’s in your library.',
+            'full' => 'Your cart is full. Check out or remove a book first.',
+            default => 'This book is not available right now.',
+        };
+
+        $ok = in_array($result, ['added', 'exists'], true);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'count' => $cart->count(),
+                'message' => $message,
+                'added' => $result === 'added',
+                'result' => $result,
+            ]);
+        }
+
+        return back()->with($ok ? 'status' : 'error', $message);
     }
-    public function remove($rowId)
-    {
-        Cart::remove($rowId);
 
-        return redirect()->back()->with('success', 'Book removed from cart!');
+    public function destroy(Request $request, Cart $cart, int $book): RedirectResponse|JsonResponse
+    {
+        $cart->remove($book);
+
+        $title = Book::withTrashed()->whereKey($book)->value('title');
+        $message = $title !== null ? "Removed “{$title}” from your cart." : 'Removed from your cart.';
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'count' => $cart->count(),
+                'subtotalCents' => $cart->subtotalCents(),
+                'message' => $message,
+            ]);
+        }
+
+        return back()->with('status', $message);
     }
 }

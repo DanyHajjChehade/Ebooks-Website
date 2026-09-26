@@ -2,52 +2,123 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-use App\Models\Setting;
+use App\Models\User;
+use App\Payments\PaymentGateway;
+use App\Payments\StripePaymentGateway;
+use App\Services\Cart;
+use App\View\Composers\SiteComposer;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Middleware\TrustProxies;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
+use Stripe\StripeClient;
+
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     *
-     * @return void
-     */
-    public function register()
+    public function register(): void
     {
-        //
+        $this->app->scoped(Cart::class);
+
+        $this->app->bind(PaymentGateway::class, function () {
+            $secret = config('services.stripe.secret');
+
+            return new StripePaymentGateway(filled($secret) ? new StripeClient($secret) : null);
+        });
+    }
+
+    public function boot(): void
+    {
+        $this->configureModels();
+        $this->configureUrls();
+        $this->configureAuthorization();
+        $this->configureRateLimiting();
+
+        View::composer('*', SiteComposer::class);
+
+        // @money($cents) / @money($cents, 'eur') => "$12.99"
+        Blade::directive('money', fn (string $expression) => "<?php echo e(\\App\\Support\\Money::format({$expression})); ?>");
+
+        if ($proxies = config('app.trusted_proxies')) {
+            TrustProxies::at($proxies === '*' ? '*' : array_map('trim', explode(',', $proxies)));
+        }
+
+        Password::defaults(fn () => $this->app->isProduction()
+            ? Password::min(8)->letters()->numbers()->uncompromised()
+            : Password::min(8));
+
+        DB::prohibitDestructiveCommands($this->app->isProduction());
     }
 
     /**
-     * Bootstrap any application services.
-     *
-     * @return void
+     * In production every absolute URL is built from APP_URL, never from the
+     * request's Host header (defence in depth next to trustHosts()).
      */
-    public function boot()
+    public function configureUrls(): void
     {
-        Blade::if('admin', function () {
-            return auth()->check() && auth()->user()->usertype == 1;
-        });
+        $appUrl = (string) config('app.url');
 
-        if(!app()->runningInConsole()){
-            $setting = Setting::firstOr(function () {
-                return Setting::create([
-                     'name' => 'Book Planet',
-                     'description' => "Explore the books we're reading, the joy of shared knowledge, and the events that inspire and delight us.",
-                     'logo'=>'logo/86b48e77-4d03-4346-8e40-7bd6f6c9d93e2024-06-05.png',
-                     'favicon'=>'logo/b15fb0b5-ffef-42a0-b8fb-ea33115175322024-06-05.png',
-                     'email'=>'bookplanet@gmail.com',
-                     'phone'=>'+961 70 70 70 80',
-                     'address'=>'chhim,mont-lebanon,lebanon',
-                     'facebook'=>'bookplanet',
-                     'twitter'=>'bookplanet',
-                     'instagram'=>'bookplanet',
-                     'youtube'=>'bookplanet',
-                     'tiktok'=>'bookplanet'
-                 ]);
-              });
+        if (! $this->app->isProduction() || parse_url($appUrl, PHP_URL_HOST) === null) {
+            return;
+        }
 
+        URL::forceRootUrl(rtrim($appUrl, '/'));
 
-              view()->share('setting', $setting);
-            }
+        if (str_starts_with($appUrl, 'https://')) {
+            URL::forceScheme('https');
+        }
+    }
+
+    private function configureModels(): void
+    {
+        $strict = ! $this->app->isProduction();
+
+        Model::preventSilentlyDiscardingAttributes($strict);
+        Model::preventLazyLoading($strict);
+
+        if ($this->app->isLocal()) {
+            // Surface N+1 queries in the log during development instead of crashing the page.
+            Model::handleLazyLoadingViolationUsing(function (Model $model, string $relation) {
+                logger()->warning(sprintf('Lazy loaded [%s] on [%s].', $relation, $model::class));
+            });
+        }
+    }
+
+    private function configureAuthorization(): void
+    {
+        Gate::define('access-admin', fn (User $user): bool => $user->isAdmin());
+    }
+
+    private function configureRateLimiting(): void
+    {
+        RateLimiter::for('login', fn (Request $request) => [
+            Limit::perMinute(10)->by('login-ip:'.$request->ip()),
+            Limit::perMinute(5)->by('login:'.Str::lower(trim((string) $request->input('email'))).'|'.$request->ip()),
+        ]);
+
+        RateLimiter::for('password-reset', fn (Request $request) => [
+            Limit::perMinute(5)->by('password-reset-ip:'.$request->ip()),
+            Limit::perHour(10)->by('password-reset:'.Str::lower(trim((string) $request->input('email')))),
+        ]);
+
+        RateLimiter::for('downloads', fn (Request $request) => Limit::perMinute(20)
+            ->by('downloads:'.($request->user()?->getKey() ?? $request->ip())));
+
+        RateLimiter::for('checkout', fn (Request $request) => Limit::perMinute(10)
+            ->by('checkout:'.($request->user()?->getKey() ?? $request->ip())));
+
+        RateLimiter::for('reviews', fn (Request $request) => Limit::perMinute(10)
+            ->by('reviews:'.($request->user()?->getKey() ?? $request->ip())));
+
+        RateLimiter::for('cart', fn (Request $request) => Limit::perMinute(60)
+            ->by('cart:'.($request->user()?->getKey() ?? $request->ip())));
     }
 }

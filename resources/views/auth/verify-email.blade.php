@@ -1,31 +1,20 @@
-<x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __('Thanks for signing up! Before getting started, could you verify your email address by clicking on the link we just emailed to you? If you didn\'t receive the email, we will gladly send you another.') }}
+<x-layouts.auth title="Check your inbox">
+    <div class="grid gap-2">
+        <h1 class="h2">Check your inbox</h1>
+        <p class="text-muted">We sent a link to <strong class="text-ink">{{ auth()->user()->email }}</strong>. Select it to confirm your address. You can keep shopping while you wait.</p>
     </div>
-
-    @if (session('status') == 'verification-link-sent')
-        <div class="mb-4 font-medium text-sm text-green-600">
-            {{ __('A new verification link has been sent to the email address you provided during registration.') }}
-        </div>
+    @if (session('status'))
+        <x-alert variant="success">{{ session('status') === 'verification-link-sent' ? 'A new link is on its way.' : session('status') }}</x-alert>
     @endif
-
-    <div class="mt-4 flex items-center justify-between">
+    <div class="flex flex-wrap gap-3">
         <form method="POST" action="{{ route('verification.send') }}">
             @csrf
-
-            <div>
-                <x-primary-button>
-                    {{ __('Resend Verification Email') }}
-                </x-primary-button>
-            </div>
+            <button class="btn btn-secondary" type="submit" data-busy-label="Sending…">Send the link again</button>
         </form>
-
         <form method="POST" action="{{ route('logout') }}">
             @csrf
-
-            <button type="submit" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                {{ __('Log Out') }}
-            </button>
+            <button class="btn btn-ghost" type="submit">Log out</button>
         </form>
     </div>
-</x-guest-layout>
+    <p class="text-sm"><a class="link" href="{{ route('home') }}">Keep shopping</a></p>
+</x-layouts.auth>

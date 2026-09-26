@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Tests (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: true
+      matrix:
+        php: ['8.3', '8.4']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: dom, curl, fileinfo, intl, libxml, mbstring, pdo_sqlite, sqlite3, zip
+          coverage: none
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Locate the Composer cache
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ matrix.php }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ matrix.php }}-
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Audit Composer dependencies
+        run: composer audit
+
+      - name: Install npm dependencies and build assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Audit npm dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Check code style
+        run: vendor/bin/pint --test
+
+      - name: Run migrations and seed (SQLite)
+        run: |
+          touch database/database.sqlite
+          php artisan migrate:fresh --seed --force
+
+      - name: Run tests
+        run: php artisan test
+
+      # Prove the production install boots: no dev packages, production env,
+      # and every cache that the README's release steps build.
+      - name: Production boot check (composer --no-dev + caches)
+        run: |
+          rm -f database/database.sqlite
+          touch database/database.sqlite
+          cat > .env <<'ENV'
+          APP_NAME="Book Planet"
+          APP_ENV=production
+          APP_DEBUG=false
+          APP_KEY=
+          APP_URL=https://bookplanet.example
+          LOG_CHANNEL=stderr
+          DB_CONNECTION=sqlite
+          SESSION_DRIVER=file
+          CACHE_STORE=file
+          QUEUE_CONNECTION=sync
+          MAIL_MAILER=log
+          ENV
+          composer install --no-dev --optimize-autoloader --prefer-dist --no-interaction --no-progress
+          php artisan optimize:clear
+          php artisan key:generate --force
+          php artisan migrate --force
+          php artisan db:seed --force
+          test "$(php artisan tinker --execute 'echo App\Models\User::count();')" = "0"
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          php artisan event:cache
+          php artisan about --only=environment
