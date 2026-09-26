@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests;
 
-
 /**
  * Plain `?q=` search (storefront authors list, admin authors/categories).
  */

@@ -6,6 +6,7 @@ use App\Models\Author;
 use App\Models\Book;
 use App\Models\Category;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -80,7 +81,7 @@ class BookFactory extends Factory
     public function withFile(string $contents = "%PDF-1.4\n%fake\n"): static
     {
         return $this->afterCreating(function (Book $book) use ($contents) {
-            \Illuminate\Support\Facades\Storage::disk(config('bookplanet.ebook_disk'))->put($book->file_path, $contents);
+            Storage::disk(config('bookplanet.ebook_disk'))->put($book->file_path, $contents);
         });
     }
 }

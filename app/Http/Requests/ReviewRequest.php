@@ -2,17 +2,28 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Book;
 use App\Models\Review;
+use Illuminate\Auth\Access\Response;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 
 class ReviewRequest extends FormRequest
 {
     /**
-     * Authorisation happens in the controller via ReviewPolicy.
+     * ReviewPolicy runs before validation, so non-owners get a 403 rather than
+     * validation errors. (Controllers authorise again explicitly.)
      */
-    public function authorize(): bool
+    public function authorize(): Response
     {
-        return true;
+        $review = $this->route('review');
+        $book = $this->route('book');
+
+        return match (true) {
+            $review instanceof Review => Gate::inspect('update', $review),
+            $book instanceof Book => Gate::inspect('create', [Review::class, $book]),
+            default => Response::deny(),
+        };
     }
 
     protected function prepareForValidation(): void

@@ -11,6 +11,7 @@ use App\Models\Category;
 use App\Services\UploadStorage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class BookController extends Controller
@@ -113,7 +114,7 @@ class BookController extends Controller
     }
 
     /**
-     * @return array{book: Book, authors: \Illuminate\Support\Collection<int, Author>, categories: \Illuminate\Support\Collection<int, Category>}
+     * @return array{book: Book, authors: Collection<int, Author>, categories: Collection<int, Category>}
      */
     private function formData(Book $book): array
     {
