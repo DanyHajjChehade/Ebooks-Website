@@ -33,6 +33,26 @@ class AuthenticationTest extends TestCase
             ->assertRedirect(route('admin.dashboard'));
     }
 
+    public function test_logging_in_from_the_cart_returns_to_the_cart(): void
+    {
+        $user = User::factory()->create();
+
+        $this->get('/login?return=cart')->assertOk();
+
+        $this->post('/login', ['email' => $user->email, 'password' => 'password'])
+            ->assertRedirect(route('cart.index'));
+    }
+
+    public function test_return_parameter_is_allow_listed(): void
+    {
+        $user = User::factory()->create();
+
+        $this->get('/login?return='.urlencode('https://evil.example'))->assertOk();
+
+        $this->post('/login', ['email' => $user->email, 'password' => 'password'])
+            ->assertRedirect(route('library.index'));
+    }
+
     public function test_login_redirects_to_the_intended_page(): void
     {
         $user = User::factory()->create();

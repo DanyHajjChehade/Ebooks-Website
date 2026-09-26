@@ -37,7 +37,7 @@
     <main id="main" tabindex="-1" class="container-page flex-1 outline-none">
         <div class="mx-auto grid max-w-[36rem] grid-cols-1 justify-items-start gap-6 py-[12vh]">
             <a class="wordmark" href="{{ url('/') }}" aria-label="Book Planet home"><svg class="wordmark__mark" aria-hidden="true" focusable="false"><use href="#bp-planet"/></svg><span>Book <em>Planet</em></span></a>
-            <p class="font-serif text-5xl font-light italic text-muted" aria-hidden="true">@yield('code')</p>
+            <p class="pt-4 font-serif text-5xl font-light italic text-muted" aria-hidden="true">@yield('code')</p>
             <h1 class="h1">@yield('heading')</h1>
             <p class="lede">@yield('body')</p>
             @hasSection('actions')
@@ -45,6 +45,6 @@
             @endif
         </div>
     </main>
-    <footer class="container-page pb-8 text-xs text-muted">© Book Planet</footer>
+    <footer class="container-page pb-8"><p class="mx-auto max-w-[36rem] text-xs text-muted">© Book Planet</p></footer>
 </body>
 </html>

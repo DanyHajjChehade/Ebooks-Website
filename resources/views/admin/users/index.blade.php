@@ -22,25 +22,26 @@
         <div class="table-wrap">
             <table class="table">
                 <caption class="sr-only">Users</caption>
-                <thead><tr><th scope="col">User</th><th scope="col">Email</th><th scope="col">Joined</th><th scope="col" class="num">Orders</th><th scope="col" class="num">Books</th><th scope="col">Role</th><th scope="col" class="actions"><span class="sr-only">Actions</span></th></tr></thead>
+                <thead><tr><th scope="col">User</th><th scope="col">Joined</th><th scope="col" class="num">Orders</th><th scope="col" class="num">Books</th><th scope="col">Role</th><th scope="col" class="actions"><span class="sr-only">Actions</span></th></tr></thead>
                 <tbody>
                     @foreach ($users as $user)
                         <tr>
-                            <th class="min-w-48" scope="row">
+                            <th class="min-w-64" scope="row">
                                 <span class="flex items-center gap-3">
                                     <x-avatar :name="$user->name" :id="$user->id" size="sm"/>
-                                    <span class="font-semibold">{{ $user->name }}</span>
-                                    @if ($user->id === $me)<x-badge variant="outline">You</x-badge>@endif
+                                    <span class="grid min-w-0">
+                                        <span class="flex flex-wrap items-center gap-2 font-semibold">{{ $user->name }}@if ($user->id === $me)<x-badge variant="outline">You</x-badge>@endif</span>
+                                        <span class="truncate font-normal text-muted">{{ $user->email }}</span>
+                                    </span>
                                 </span>
                             </th>
-                            <td>{{ $user->email }}</td>
                             <td class="whitespace-nowrap"><time datetime="{{ $user->created_at->toIso8601String() }}">{{ $user->created_at->format('M j, Y') }}</time></td>
                             <td class="num">{{ $user->orders_count }}</td>
                             <td class="num">{{ $user->books_count }}</td>
                             <td>@if ($user->is_admin)<x-badge variant="accent">Admin</x-badge>@else<span class="text-muted">Customer</span>@endif</td>
                             <td class="actions">
                                 @if ($user->id === $me)
-                                    <span class="text-xs text-muted">You can’t change your own role.</span>
+                                    <span class="inline-block max-w-40 whitespace-normal text-left text-xs text-muted">You can’t change your own role.</span>
                                 @else
                                     <form method="POST" action="{{ route('admin.users.toggle-admin', $user) }}">
                                         @csrf

@@ -21,7 +21,7 @@
                 <tbody>
                     @foreach ($reviews as $review)
                         <tr>
-                            <th scope="row" class="min-w-64 font-normal">
+                            <th scope="row" class="min-w-72 whitespace-normal font-normal">
                                 <span class="grid gap-1">
                                     <x-stars :value="$review->rating"/>
                                     <span class="line-clamp-2 max-w-md font-normal">{{ $review->body }}</span>

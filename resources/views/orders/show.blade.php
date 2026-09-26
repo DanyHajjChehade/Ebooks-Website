@@ -53,8 +53,8 @@
 
             <div class="grid gap-3 text-sm sm:w-full sm:max-w-sm sm:justify-self-end">
                 <dl class="grid gap-3">
-                    <div class="flex justify-between gap-4"><dt class="text-muted">Subtotal</dt><dd class="tabular">{{ $money($order->subtotal_cents) }}</dd></div>
-                    <div class="flex items-baseline justify-between gap-4 border-t border-line pt-3"><dt class="font-semibold">Total</dt><dd class="tabular text-xl font-semibold">{{ $money($order->subtotal_cents) }}</dd></div>
+                    <div class="flex justify-between gap-4"><dt class="text-muted">Subtotal</dt><dd>{{ $money($order->subtotal_cents) }}</dd></div>
+                    <div class="flex items-baseline justify-between gap-4 border-t border-line pt-3"><dt class="font-semibold">Total</dt><dd class="text-xl font-semibold">{{ $money($order->subtotal_cents) }}</dd></div>
                 </dl>
                 @if ($order->isPaid() && $order->subtotal_cents > 0)<p class="text-muted">Paid by card through Stripe</p>@endif
             </div>

@@ -47,14 +47,14 @@
                             <dl class="grid gap-3 text-sm">
                                 <div class="flex justify-between gap-4">
                                     <dt class="text-muted">Subtotal · <span data-cart-books-count>{{ $books($n) }}</span></dt>
-                                    <dd class="tabular" data-subtotal>{{ $totalLabel }}</dd>
+                                    <dd data-subtotal>{{ $totalLabel }}</dd>
                                 </div>
                                 @if (config('services.stripe.automatic_tax'))
                                     <div class="flex justify-between gap-4"><dt class="text-muted">Tax</dt><dd class="text-muted">Calculated at checkout</dd></div>
                                 @endif
                                 <div class="flex items-baseline justify-between gap-4 border-t border-line pt-3">
                                     <dt class="font-semibold">Total</dt>
-                                    <dd class="price tabular text-xl" data-subtotal>{{ $totalLabel }}</dd>
+                                    <dd class="price text-xl" data-subtotal>{{ $totalLabel }}</dd>
                                 </div>
                             </dl>
                             @auth
@@ -64,8 +64,8 @@
                                 </form>
                             @else
                                 <div class="grid gap-2">
-                                    <a class="btn btn-primary btn-lg btn-block" href="{{ route('login') }}"><x-icon name="lock"/>Log in to check out</a>
-                                    <p class="text-center text-sm">New here? <a class="link" href="{{ route('register') }}">Create an account</a></p>
+                                    <a class="btn btn-primary btn-lg btn-block" href="{{ route('login', ['return' => 'cart']) }}"><x-icon name="lock"/>Log in to check out</a>
+                                    <p class="text-center text-sm">New here? <a class="link" href="{{ route('register', ['return' => 'cart']) }}">Create an account</a></p>
                                 </div>
                             @endauth
                             <p class="text-xs text-muted">Ebooks are digital content, ready to download as soon as your payment clears. By selecting Check out, you ask for immediate access and accept that you can’t cancel for a refund once the download is available. <a class="link" href="{{ route('pages.refunds') }}">Refund policy</a></p>

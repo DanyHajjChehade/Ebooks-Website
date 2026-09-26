@@ -41,7 +41,7 @@
                 <span class="min-w-0 flex-1 truncate text-sm font-semibold">{{ $user->name }}</span>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
-                    <button class="btn btn-ghost btn-sm" type="submit">Log out</button>
+                    <button class="btn btn-ghost btn-sm btn-icon" type="submit" aria-label="Log out" title="Log out"><x-icon name="log-out"/></button>
                 </form>
             </div>
         @endif

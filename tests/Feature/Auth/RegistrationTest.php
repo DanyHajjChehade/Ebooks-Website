@@ -28,6 +28,18 @@ class RegistrationTest extends TestCase
         $this->assertDatabaseHas('users', ['email' => 'test@example.com', 'is_admin' => false]);
     }
 
+    public function test_registering_from_the_cart_returns_to_the_cart(): void
+    {
+        $this->get('/register?return=cart')->assertOk();
+
+        $this->post('/register', [
+            'name' => 'Cart Reader',
+            'email' => 'cart.reader@example.com',
+            'password' => 'a-Strong-passphrase-42',
+            'password_confirmation' => 'a-Strong-passphrase-42',
+        ])->assertRedirect(route('cart.index'));
+    }
+
     public function test_registration_cannot_grant_admin(): void
     {
         $this->post('/register', [

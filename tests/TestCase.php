@@ -13,6 +13,13 @@ use Tests\Fakes\FakePaymentGateway;
 
 abstract class TestCase extends BaseTestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->withoutVite();
+    }
+
     protected function admin(array $attributes = []): User
     {
         return User::factory()->admin()->create($attributes);

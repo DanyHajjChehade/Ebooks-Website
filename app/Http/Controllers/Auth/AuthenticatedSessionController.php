@@ -11,8 +11,10 @@ use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
-    public function create(): View
+    public function create(Request $request): View
     {
+        $this->rememberCartReturn($request);
+
         return view('auth.login');
     }
 
