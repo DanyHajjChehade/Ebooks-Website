@@ -1,9 +1,4 @@
-@extends('layouts.app')
-@section('title', 'New category · Admin')
-@section('content')
-    <h1>New category</h1>
-    <form method="POST" action="{{ route('admin.categories.store') }}">@csrf
-        @include('admin.categories.form')
-        <button type="submit">Create category</button>
-    </form>
-@endsection
+<x-layouts.admin title="Add a category">
+    <x-admin.page-header title="Add a category" :breadcrumbs="[['Admin', route('admin.dashboard')], ['Categories', route('admin.categories.index')], ['Add a category']]"/>
+    @include('admin.categories.form')
+</x-layouts.admin>

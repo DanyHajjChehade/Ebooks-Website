@@ -18,7 +18,7 @@ class HomeController extends Controller
         return view('home', [
             'featured' => Book::query()->published()
                 ->where('is_featured', true)
-                ->with('author')
+                ->with(['author', 'category'])
                 ->withAvg('reviews', 'rating')
                 ->latest('published_at')
                 ->take(8)

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>.m{color:#2F3DB0}@media (prefers-color-scheme:dark){.m{color:#9DA8FF}}</style>
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="32" height="32">
+      <rect width="32" height="32" fill="#fff"/>
+      <path d="M3.21 21.69A14 4.5 -24 0 0 28.79 10.31" fill="none" stroke="#000" stroke-width="4.6"/>
+    </mask>
+  </defs>
+  <g class="m">
+    <path d="M3.21 21.69A14 4.5 -24 0 1 28.79 10.31" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="16" cy="16" r="8.25" fill="currentColor" mask="url(#c)"/>
+    <path d="M3.21 21.69A14 4.5 -24 0 0 28.79 10.31" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  </g>
+</svg>

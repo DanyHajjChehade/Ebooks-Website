@@ -1,0 +1,5 @@
+@extends('errors.layout')
+@section('title', 'Back shortly')
+@section('code', '503')
+@section('heading', 'Back shortly.')
+@section('body', 'Book Planet is closed for a few minutes while we reshelve. Your library and orders are safe.')

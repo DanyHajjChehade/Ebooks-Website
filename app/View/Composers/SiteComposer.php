@@ -26,6 +26,12 @@ class SiteComposer
 
     public function compose(View $view): void
     {
+        // Error pages (errors::404, errors.layout, …) must render without the database,
+        // settings cache or session: a 500/503 may be the database failing.
+        if (str_starts_with($view->name(), 'errors')) {
+            return;
+        }
+
         $shared = $this->request->attributes->get(self::MEMO_KEY);
 
         if (! is_array($shared)) {

@@ -51,7 +51,7 @@ class AuthorController extends Controller
 
     public function edit(Author $author): View
     {
-        return view('admin.authors.edit', ['author' => $author]);
+        return view('admin.authors.edit', ['author' => $author->loadCount('books')]);
     }
 
     public function update(AuthorRequest $request, Author $author): RedirectResponse

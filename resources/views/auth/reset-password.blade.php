@@ -1,14 +1,11 @@
-@extends('layouts.app')
-@section('title', 'Reset password')
-@section('content')
-    <h1>Reset password</h1>
-    <form method="POST" action="{{ route('password.store') }}">@csrf
+<x-layouts.auth title="Choose a new password">
+    <h1 class="h2">Choose a new password</h1>
+    <form class="grid gap-5" method="POST" action="{{ route('password.store') }}">
+        @csrf
         <input type="hidden" name="token" value="{{ $token }}">
-        <label>Email <input type="email" name="email" value="{{ old('email', $email) }}" required autocomplete="username"></label>
-        @error('email')<p>{{ $message }}</p>@enderror
-        <label>New password <input type="password" name="password" required autocomplete="new-password"></label>
-        @error('password')<p>{{ $message }}</p>@enderror
-        <label>Confirm password <input type="password" name="password_confirmation" required autocomplete="new-password"></label>
-        <button type="submit">Reset password</button>
+        <x-input name="email" label="Email" type="email" autocomplete="email" :value="$email" required/>
+        <x-input name="password" label="New password" type="password" autocomplete="new-password" hint="At least 8 characters." required autofocus minlength="8"/>
+        <x-input name="password_confirmation" label="Confirm new password" type="password" autocomplete="new-password" required/>
+        <button class="btn btn-primary btn-lg btn-block" type="submit" data-busy-label="Saving…">Save new password</button>
     </form>
-@endsection
+</x-layouts.auth>

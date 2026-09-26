@@ -42,7 +42,7 @@ class CategoryController extends Controller
 
     public function edit(Category $category): View
     {
-        return view('admin.categories.edit', ['category' => $category]);
+        return view('admin.categories.edit', ['category' => $category->loadCount('books')]);
     }
 
     public function update(CategoryRequest $request, Category $category): RedirectResponse

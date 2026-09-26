@@ -1,9 +1,4 @@
-@extends('layouts.app')
-@section('title', 'New book · Admin')
-@section('content')
-    <h1>New book</h1>
-    <form method="POST" action="{{ route('admin.books.store') }}" enctype="multipart/form-data">@csrf
-        @include('admin.books.form')
-        <button type="submit">Create book</button>
-    </form>
-@endsection
+<x-layouts.admin title="Add a book">
+    <x-admin.page-header title="Add a book" :breadcrumbs="[['Admin', route('admin.dashboard')], ['Books', route('admin.books.index')], ['Add a book']]"/>
+    @include('admin.books.form')
+</x-layouts.admin>
