@@ -23,8 +23,9 @@ class ProfileTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)->patch('/profile', ['name' => 'Test User', 'email' => 'test@example.com'])
+        $this->actingAs($user)->patch('/profile', ['name' => 'Test User', 'email' => ' Test@Example.com '])
             ->assertSessionHasNoErrors()
+            ->assertSessionHas('status', 'Saved.')
             ->assertRedirect('/profile');
 
         $user->refresh();

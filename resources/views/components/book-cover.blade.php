@@ -15,10 +15,10 @@
         $layout = ['classic', 'frame', 'initial', 'orbit'][$id % 4];
         $t = (string) $book->title;
         $byLen = mb_strlen($t) <= 14 ? 0 : (mb_strlen($t) <= 32 ? 1 : (mb_strlen($t) <= 60 ? 2 : 3));
-        $word = collect(preg_split('/[\s\-—]+/u', $t, -1, PREG_SPLIT_NO_EMPTY))->map(fn ($w) => mb_strlen($w))->max() ?? 0;
+        $word = collect(preg_split('/[\s\-—]+/u', $t, -1, PREG_SPLIT_NO_EMPTY) ?: [$t])->map(fn ($w) => mb_strlen($w))->max() ?? 0;
         $byWord = $word <= 8 ? 0 : ($word <= 12 ? 1 : ($word <= 16 ? 2 : 3));
         $len = ['s', 'm', 'l', 'xl'][max($byLen, $byWord)];
-        $initial = mb_strtoupper(mb_substr(preg_replace('/^(the|a|an)\s+/iu', '', $t), 0, 1));
+        $initial = mb_strtoupper(mb_substr(preg_replace('/^(the|a|an)\s+/iu', '', $t) ?? $t, 0, 1)); // null on invalid UTF-8
     }
 @endphp
 <div {{ $attributes->class('cover') }}>

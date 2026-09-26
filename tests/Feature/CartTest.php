@@ -14,12 +14,12 @@ class CartTest extends TestCase
 
     public function test_guests_can_add_books_to_the_cart(): void
     {
-        $book = Book::factory()->create();
+        $book = Book::factory()->create(['title' => 'The Salt Cartographer']);
 
         $this->from(route('books.show', $book))
             ->post('/cart', ['book_id' => $book->id])
             ->assertRedirect(route('books.show', $book))
-            ->assertSessionHas('status')
+            ->assertSessionHas('status', 'Added “The Salt Cartographer” to your cart.')
             ->assertSessionHas(Cart::SESSION_KEY, [$book->id]);
 
         $this->get('/cart')
@@ -48,7 +48,8 @@ class CartTest extends TestCase
         $book = Book::factory()->create();
         $this->purchase($user, $book);
 
-        $this->actingAs($user)->post('/cart', ['book_id' => $book->id])->assertSessionHas('error');
+        $this->actingAs($user)->post('/cart', ['book_id' => $book->id])
+            ->assertSessionHas('error', 'You already own this book. It’s in your library.');
 
         $this->assertSame([], session(Cart::SESSION_KEY, []));
     }
@@ -96,7 +97,7 @@ class CartTest extends TestCase
         $this->post('/cart', ['book_id' => $book->id]);
         $this->post('/cart', ['book_id' => $other->id]);
 
-        $this->delete('/cart/'.$book->id)->assertRedirect()->assertSessionHas('status');
+        $this->delete('/cart/'.$book->id)->assertRedirect()->assertSessionHas('status', "Removed “{$book->title}” from your cart.");
 
         $this->assertSame([$other->id], session(Cart::SESSION_KEY));
     }

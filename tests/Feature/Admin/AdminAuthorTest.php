@@ -83,6 +83,18 @@ class AdminAuthorTest extends TestCase
         Storage::disk('public')->assertExists($author->photo_path);
     }
 
+    public function test_author_slugs_are_normalised_and_text_must_be_valid_utf8(): void
+    {
+        Author::factory()->create(['slug' => 'mira-solace']);
+
+        $this->actingAs($this->admin)->post(route('admin.authors.store'), ['name' => 'Mira', 'slug' => 'Mira_Solace'])
+            ->assertSessionHasErrors('slug');
+        $this->actingAs($this->admin)->post(route('admin.authors.store'), ['name' => "Bad \xFF", 'bio' => "Bio \xC3\x28"])
+            ->assertSessionHasErrors(['name', 'bio']);
+
+        $this->assertDatabaseCount('authors', 1);
+    }
+
     public function test_an_author_with_books_cannot_be_deleted(): void
     {
         $book = Book::factory()->create();

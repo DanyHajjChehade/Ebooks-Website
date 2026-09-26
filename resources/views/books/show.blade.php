@@ -11,7 +11,8 @@
     $count = (int) ($book->reviews_count ?? $reviews->total());
     $avg = $book->reviews_avg_rating !== null ? round((float) $book->reviews_avg_rating, 1) : null;
     $save = $book->isOnSale() && $book->price_cents > 0 ? (int) floor(($book->price_cents - $book->effective_price_cents) / $book->price_cents * 100) : 0;
-    $paragraphs = collect(preg_split('/\R\s*\R/u', trim((string) $book->description)))->map(fn ($p) => trim($p))->filter();
+    // preg_split returns false on invalid UTF-8 (N2): fall back to one paragraph instead of failing the page.
+    $paragraphs = collect(preg_split('/\R\s*\R/u', trim((string) $book->description)) ?: [trim((string) $book->description)])->map(fn ($p) => trim($p))->filter();
     $crumbs = array_values(array_filter([
         ['Books', route('books.index')],
         $category ? [$category->name, $categoryLive ? route('categories.show', $category) : null] : null,
@@ -56,7 +57,7 @@
             'item' => $c[1] ?? route('books.show', $book),
         ]))->all(),
     ];
-    $json = fn ($data) => json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP);
+    $json = fn ($data) => json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_INVALID_UTF8_SUBSTITUTE);
     $reviewErrors = $errors->hasAny(['rating', 'body']);
 @endphp
 <x-layouts.app :title="$book->title.($author ? ' by '.$author->name : '')" :description="Str::limit(trim((string) $book->description), 155)" og-type="book" :og-image="$book->cover_url" :canonical="route('books.show', $book)">
@@ -222,7 +223,7 @@
                                 </div>
                             </div>
                             <div class="prose-book">
-                                @foreach (preg_split('/\R\s*\R/u', trim($review->body)) as $p)
+                                @foreach (preg_split('/\R\s*\R/u', trim((string) $review->body)) ?: [trim((string) $review->body)] as $p)
                                     <p>{{ $p }}</p>
                                 @endforeach
                             </div>

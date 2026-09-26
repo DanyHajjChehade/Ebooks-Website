@@ -6,6 +6,7 @@ use App\Models\Book;
 use App\Models\Review;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Gate;
 use Tests\TestCase;
 
 class ReviewTest extends TestCase
@@ -21,7 +22,7 @@ class ReviewTest extends TestCase
         $this->actingAs($user)
             ->post(route('reviews.store', $book), ['rating' => 5, 'body' => 'Wonderful.', 'user_id' => 999])
             ->assertRedirect(route('books.show', $book).'#reviews')
-            ->assertSessionHas('status');
+            ->assertSessionHas('status', 'Review posted.');
 
         $this->assertDatabaseHas('reviews', ['user_id' => $user->id, 'book_id' => $book->id, 'rating' => 5, 'body' => 'Wonderful.']);
     }
@@ -72,16 +73,48 @@ class ReviewTest extends TestCase
         $this->assertDatabaseCount('reviews', 0);
     }
 
+    public function test_review_bodies_must_be_valid_utf8(): void
+    {
+        $user = User::factory()->create();
+        $book = Book::factory()->create();
+        $this->purchase($user, $book);
+
+        $this->actingAs($user)->post(route('reviews.store', $book), ['rating' => 5, 'body' => "Great \xFF book"])
+            ->assertSessionHasErrors('body');
+
+        $this->assertDatabaseCount('reviews', 0);
+        $this->get(route('books.show', $book))->assertOk();
+    }
+
+    public function test_policy_messages_match_the_copy_deck(): void
+    {
+        $user = User::factory()->create();
+        $book = Book::factory()->create();
+
+        $this->assertSame(
+            'Only readers who bought this book can review it.',
+            Gate::forUser($user)->inspect('create', [Review::class, $book])->message(),
+        );
+
+        $this->purchase($user, $book);
+        Review::factory()->for($user)->for($book)->create();
+
+        $this->assertSame(
+            'You’ve already reviewed this book.',
+            Gate::forUser($user)->inspect('create', [Review::class, $book])->message(),
+        );
+    }
+
     public function test_authors_can_edit_and_delete_their_review(): void
     {
         $user = User::factory()->create();
         $review = Review::factory()->for($user)->create(['rating' => 3]);
 
         $this->actingAs($user)->patch(route('reviews.update', $review), ['rating' => 5, 'body' => 'Changed my mind.'])
-            ->assertRedirect()->assertSessionHas('status');
+            ->assertRedirect()->assertSessionHas('status', 'Review updated.');
         $this->assertSame(5, $review->refresh()->rating);
 
-        $this->actingAs($user)->delete(route('reviews.destroy', $review))->assertRedirect();
+        $this->actingAs($user)->delete(route('reviews.destroy', $review))->assertRedirect()->assertSessionHas('status', 'Review deleted.');
         $this->assertModelMissing($review);
     }
 

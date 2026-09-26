@@ -27,9 +27,9 @@ class CartController extends Controller
         $result = $cart->add($book);
 
         $message = match ($result) {
-            'added' => "“{$book->title}” is in your cart.",
+            'added' => "Added “{$book->title}” to your cart.",
             'exists' => "“{$book->title}” is already in your cart.",
-            'owned' => 'You already own this book — find it in your library.',
+            'owned' => 'You already own this book. It’s in your library.',
             'full' => 'Your cart is full. Check out or remove a book first.',
             default => 'This book is not available right now.',
         };
@@ -52,14 +52,17 @@ class CartController extends Controller
     {
         $cart->remove($book);
 
+        $title = Book::withTrashed()->whereKey($book)->value('title');
+        $message = $title !== null ? "Removed “{$title}” from your cart." : 'Removed from your cart.';
+
         if ($request->wantsJson()) {
             return response()->json([
                 'count' => $cart->count(),
                 'subtotalCents' => $cart->subtotalCents(),
-                'message' => 'Removed from your cart.',
+                'message' => $message,
             ]);
         }
 
-        return back()->with('status', 'Removed from your cart.');
+        return back()->with('status', $message);
     }
 }

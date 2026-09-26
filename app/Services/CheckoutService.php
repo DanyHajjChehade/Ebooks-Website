@@ -5,8 +5,11 @@ namespace App\Services;
 use App\Enums\OrderStatus;
 use App\Models\Book;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\User;
 use App\Payments\CheckoutSession;
+use App\Payments\PaymentGateway;
+use App\Payments\PaymentGatewayException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -19,6 +22,8 @@ use Illuminate\Support\Facades\Log;
  */
 class CheckoutService
 {
+    public function __construct(private readonly PaymentGateway $gateway) {}
+
     /**
      * Create a pending order for the given books using current DB prices.
      *
@@ -142,6 +147,56 @@ class CheckoutService
     }
 
     /**
+     * Abandon a pending order: expire its Stripe session so it can no longer be
+     * paid, then mark it failed. When Stripe refuses (most likely the customer
+     * has just paid, or the session already closed), the order stays pending
+     * and the webhook settles it. Returns true when the order is now failed.
+     */
+    public function abandon(Order $order): bool
+    {
+        if (! $order->isPending()) {
+            return false;
+        }
+
+        if ($order->stripe_checkout_session_id !== null) {
+            try {
+                $this->gateway->expireCheckoutSession($order->stripe_checkout_session_id);
+            } catch (PaymentGatewayException $e) {
+                Log::info('Could not expire checkout session; leaving the order pending', [
+                    'order_id' => $order->getKey(),
+                    'reason' => $e->getMessage(),
+                ]);
+
+                return false;
+            }
+        }
+
+        $updated = Order::query()
+            ->whereKey($order->getKey())
+            ->where('status', OrderStatus::Pending->value)
+            ->update(['status' => OrderStatus::Failed->value, 'updated_at' => now()]);
+
+        $order->refresh();
+
+        return $updated === 1;
+    }
+
+    /**
+     * Abandon every pending order of the user that has an open Stripe session,
+     * so an earlier checkout (another tab, the back button) can't be paid on
+     * top of a new one. Returns how many orders were marked failed.
+     */
+    public function abandonPendingOrders(User $user): int
+    {
+        return $user->orders()
+            ->where('status', OrderStatus::Pending->value)
+            ->whereNotNull('stripe_checkout_session_id')
+            ->get()
+            ->filter(fn (Order $order) => $this->abandon($order))
+            ->count();
+    }
+
+    /**
      * Stripe reported the session expired or its async payment failed.
      */
     public function failCheckoutSession(CheckoutSession $session): ?Order
@@ -162,27 +217,83 @@ class CheckoutService
 
     /**
      * Mark a paid order refunded and revoke the library access it granted.
+     * Returns how many books left the customer's library, or null when the
+     * order was not paid (already refunded, pending, failed): idempotent.
      */
-    public function refund(Order $order): bool
+    public function refund(Order $order): ?int
     {
-        $refunded = DB::transaction(function () use ($order) {
+        $removed = DB::transaction(function () use ($order) {
             $updated = Order::query()
                 ->whereKey($order->getKey())
                 ->where('status', OrderStatus::Paid->value)
                 ->update(['status' => OrderStatus::Refunded->value, 'updated_at' => now()]);
 
             if ($updated !== 1) {
-                return false;
+                return null;
             }
 
-            DB::table('book_user')->where('order_id', $order->getKey())->delete();
-
-            return true;
+            return $this->revokeLibraryRows($order);
         });
 
         $order->refresh();
 
-        return $refunded;
+        return $removed;
+    }
+
+    /**
+     * Remove the library rows this order granted. A book the customer also
+     * bought in another *paid* order stays in the library, re-pointed at that
+     * order, so refunding a duplicate purchase never takes away a paid book.
+     * Returns the number of rows deleted.
+     */
+    private function revokeLibraryRows(Order $order): int
+    {
+        $deleted = 0;
+
+        $rows = DB::table('book_user')->where('order_id', $order->getKey())->get(['id', 'user_id', 'book_id']);
+
+        foreach ($rows as $row) {
+            $otherOrderId = OrderItem::query()
+                ->where('book_id', $row->book_id)
+                ->where('order_id', '!=', $order->getKey())
+                ->whereHas('order', fn ($query) => $query
+                    ->where('user_id', $row->user_id)
+                    ->where('status', OrderStatus::Paid->value))
+                ->orderBy('order_id')
+                ->value('order_id');
+
+            if ($otherOrderId !== null) {
+                DB::table('book_user')->where('id', $row->id)->update(['order_id' => $otherOrderId, 'updated_at' => now()]);
+            } else {
+                $deleted += DB::table('book_user')->where('id', $row->id)->delete();
+            }
+        }
+
+        return $deleted;
+    }
+
+    /**
+     * Handle a Stripe `charge.dispute.closed` payload: a lost chargeback is
+     * treated like a full refund (access revoked).
+     *
+     * @param  array<string, mixed>  $dispute
+     */
+    public function revokeForLostDispute(array $dispute): ?Order
+    {
+        if (($dispute['status'] ?? null) !== 'lost') {
+            return null;
+        }
+
+        $order = $this->findOrderByPaymentIntent($dispute['payment_intent'] ?? null);
+
+        if ($order === null) {
+            return null;
+        }
+
+        Log::warning('Chargeback lost; revoking access', ['order_id' => $order->getKey()]);
+        $this->refund($order);
+
+        return $order;
     }
 
     /**
@@ -192,14 +303,7 @@ class CheckoutService
      */
     public function refundFromCharge(array $charge): ?Order
     {
-        $paymentIntent = $charge['payment_intent'] ?? null;
-        $paymentIntent = is_array($paymentIntent) ? ($paymentIntent['id'] ?? null) : $paymentIntent;
-
-        if (! is_string($paymentIntent) || $paymentIntent === '') {
-            return null;
-        }
-
-        $order = Order::query()->where('stripe_payment_intent_id', $paymentIntent)->first();
+        $order = $this->findOrderByPaymentIntent($charge['payment_intent'] ?? null);
 
         if ($order === null) {
             return null;
@@ -218,6 +322,20 @@ class CheckoutService
         $this->refund($order);
 
         return $order;
+    }
+
+    /**
+     * @param  string|array<string, mixed>|null  $paymentIntent  id or expanded object
+     */
+    private function findOrderByPaymentIntent(string|array|null $paymentIntent): ?Order
+    {
+        $paymentIntent = is_array($paymentIntent) ? ($paymentIntent['id'] ?? null) : $paymentIntent;
+
+        if (! is_string($paymentIntent) || $paymentIntent === '') {
+            return null;
+        }
+
+        return Order::query()->where('stripe_payment_intent_id', $paymentIntent)->first();
     }
 
     private function findOrderForSession(CheckoutSession $session): ?Order

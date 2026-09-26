@@ -3,8 +3,9 @@
 @php
     $paid = $order->isPaid();
     $failed = $order->status->value === 'failed';
+    $refunded = $order->status->value === 'refunded';
 @endphp
-<x-layouts.app :title="$paid ? 'Your books are ready' : 'Payment processing'" :noindex="true">
+<x-layouts.app :title="$paid ? 'Your books are ready' : ($refunded ? 'Order refunded' : ($failed ? 'Payment didn’t go through' : 'Payment processing'))" :noindex="true">
     <div class="container-page py-section-sm">
         <div class="mx-auto grid max-w-[36rem] grid-cols-1 gap-6">
             @if ($paid)
@@ -34,6 +35,18 @@
                 </ul>
                 <div class="flex flex-wrap gap-3">
                     <x-button variant="primary" :href="route('library.index')">Go to your library</x-button>
+                    <x-button variant="ghost" :href="route('books.index')">Keep browsing</x-button>
+                </div>
+                <p class="text-sm text-muted">Questions about this order? <a class="link" href="{{ route('pages.contact') }}">Contact us</a> and quote {{ $order->reference }}.</p>
+            @elseif ($refunded)
+                <span class="inline-grid size-14 place-items-center rounded-full bg-sunken text-muted"><x-icon name="receipt-text" class="size-7"/></span>
+                <div class="grid gap-3">
+                    <p class="eyebrow">Order {{ $order->reference }} · Refunded</p>
+                    <h1 class="h1">This order was refunded.</h1>
+                    <p class="lede">Refunded. These books were removed from your library.</p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <x-button variant="primary" :href="route('orders.show', $order)">View order</x-button>
                     <x-button variant="ghost" :href="route('books.index')">Keep browsing</x-button>
                 </div>
                 <p class="text-sm text-muted">Questions about this order? <a class="link" href="{{ route('pages.contact') }}">Contact us</a> and quote {{ $order->reference }}.</p>

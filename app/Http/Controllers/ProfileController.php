@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\DeleteAccountRequest;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\User;
+use App\Services\CheckoutService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,10 +31,10 @@ class ProfileController extends Controller
 
         $user->save();
 
-        return redirect()->route('profile.edit')->with('status', 'Profile updated.');
+        return redirect()->route('profile.edit')->with('status', 'Saved.');
     }
 
-    public function destroy(DeleteAccountRequest $request): RedirectResponse
+    public function destroy(DeleteAccountRequest $request, CheckoutService $checkout): RedirectResponse
     {
         $user = $request->user();
 
@@ -43,6 +44,10 @@ class ProfileController extends Controller
                 'userDeletion',
             );
         }
+
+        // Close open Stripe sessions first so nobody can pay for an order that no
+        // longer has an account (and so would never reach a library).
+        $checkout->abandonPendingOrders($user);
 
         Auth::logout();
 

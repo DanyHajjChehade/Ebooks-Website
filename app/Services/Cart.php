@@ -158,6 +158,28 @@ class Cart
         request()->attributes->remove(self::MEMO_KEY);
     }
 
+    /**
+     * Prune the cart and report what was taken out: books the customer already
+     * owns, and books that are no longer for sale (unpublished or removed).
+     *
+     * @return array{owned: int, unavailable: int}
+     */
+    public function prune(): array
+    {
+        $before = $this->ids();
+        $this->refresh();
+        $kept = $this->items()->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $dropped = array_diff($before, $kept);
+
+        if ($dropped === []) {
+            return ['owned' => 0, 'unavailable' => 0];
+        }
+
+        $owned = count(array_intersect($dropped, $this->user()?->ownedBookIds() ?? []));
+
+        return ['owned' => $owned, 'unavailable' => count($dropped) - $owned];
+    }
+
     public function count(): int
     {
         return $this->ids() === [] ? 0 : $this->items()->count();

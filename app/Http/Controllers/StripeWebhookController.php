@@ -42,6 +42,7 @@ class StripeWebhookController extends Controller
             'checkout.session.async_payment_failed',
             'checkout.session.expired' => $checkout->failCheckoutSession(CheckoutSession::fromStripe($object)),
             'charge.refunded' => $checkout->refundFromCharge($object),
+            'charge.dispute.closed' => $checkout->revokeForLostDispute($object),
             default => null,
         };
 

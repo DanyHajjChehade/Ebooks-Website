@@ -55,7 +55,7 @@ class AdminOrderTest extends TestCase
 
         $this->actingAs($this->admin())->post(route('admin.orders.refund', $order))
             ->assertRedirect(route('admin.orders.show', $order))
-            ->assertSessionHas('status');
+            ->assertSessionHas('status', "Order #{$order->id} refunded. 1 book removed from the customer’s library.");
 
         $this->assertSame([$order->id], $gateway->refunded);
         $this->assertSame(OrderStatus::Refunded, $order->refresh()->status);
@@ -77,7 +77,8 @@ class AdminOrderTest extends TestCase
         $book = Book::factory()->create();
         $order = $this->purchase($customer, $book);
 
-        $this->actingAs($this->admin())->post(route('admin.orders.refund', $order))->assertSessionHas('error');
+        // The provider's reason only; the view adds the title and "Nothing was changed."
+        $this->actingAs($this->admin())->post(route('admin.orders.refund', $order))->assertSessionHas('error', 'Refund declined.');
 
         $this->assertSame(OrderStatus::Paid, $order->refresh()->status);
         $this->assertTrue($customer->ownsBook($book));
@@ -88,7 +89,9 @@ class AdminOrderTest extends TestCase
         $gateway = $this->fakeGateway();
         $order = Order::factory()->create();
 
-        $this->actingAs($this->admin())->post(route('admin.orders.refund', $order))->assertSessionHas('error');
+        $this->actingAs($this->admin())->post(route('admin.orders.refund', $order))
+            ->assertSessionHas('refund_blocked', 'Only paid orders can be refunded.')
+            ->assertSessionMissing('error');
 
         $this->assertSame([], $gateway->refunded);
         $this->assertSame(OrderStatus::Pending, $order->refresh()->status);

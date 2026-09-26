@@ -23,6 +23,11 @@ class FakePaymentGateway implements PaymentGateway
     /** @var list<int> */
     public array $refunded = [];
 
+    /** @var list<string> */
+    public array $expired = [];
+
+    public bool $failExpire = false;
+
     public bool $failCreate = false;
 
     public bool $failRefund = false;
@@ -53,6 +58,20 @@ class FakePaymentGateway implements PaymentGateway
     public function retrieveCheckoutSession(string $sessionId): CheckoutSession
     {
         return $this->sessions[$sessionId] ?? throw new PaymentGatewayException("No such session {$sessionId}");
+    }
+
+    /**
+     * Like Stripe: only open (unpaid, unexpired) sessions can be expired.
+     */
+    public function expireCheckoutSession(string $sessionId): void
+    {
+        $session = $this->sessions[$sessionId] ?? null;
+
+        if ($this->failExpire || $session === null || $session->isPaid() || in_array($sessionId, $this->expired, true)) {
+            throw new PaymentGatewayException("Session {$sessionId} is not in an expireable state.");
+        }
+
+        $this->expired[] = $sessionId;
     }
 
     public function refund(Order $order): void

@@ -38,7 +38,8 @@ abstract class FilterRequest extends FormRequest
 
         foreach ($this->filterDefinitions() as $key => $allowed) {
             $value = $this->query($key);
-            $value = is_string($value) ? trim($value) : null;
+            // Non-strings and invalid UTF-8 are dropped like any other bad filter value.
+            $value = is_string($value) && mb_check_encoding($value, 'UTF-8') ? trim($value) : null;
             $value = ($value === null || $value === '') ? null : mb_substr($value, 0, 100);
 
             if ($value !== null && $allowed !== null && ! in_array($value, $allowed, true)) {

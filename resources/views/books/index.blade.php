@@ -13,9 +13,8 @@
     $without = fn (string $key) => route('books.index', \Illuminate\Support\Arr::except($params, [$key]));
     $total = $books->total();
     $heading = $q ? 'Results for “'.$q.'”' : ($filters['sort'] === 'newest' && request()->has('sort') ? 'New releases' : 'All books');
-    $canonical = $books->currentPage() > 1 ? route('books.index', ['page' => $books->currentPage()]) : route('books.index');
 @endphp
-<x-layouts.app :title="$heading" :description="'Browse '.$total.' ebooks from independent authors: novels, essays and poetry as EPUB and PDF, ready to download.'" :canonical="$canonical" :noindex="(bool) $q">
+<x-layouts.app :title="$heading" :description="'Browse '.$total.' ebooks from independent authors: novels, essays and poetry as EPUB and PDF, ready to download.'" :noindex="(bool) $q">
     <div class="container-page py-section-sm">
         <header class="mb-8 grid gap-2">
             <h1 class="h1">{{ $heading }}</h1>

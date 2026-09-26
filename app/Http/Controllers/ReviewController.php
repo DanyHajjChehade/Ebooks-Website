@@ -20,7 +20,7 @@ class ReviewController extends Controller
         $review->save();
 
         return redirect()->to(route('books.show', $book).'#reviews')
-            ->with('status', 'Thanks — your review is live.');
+            ->with('status', 'Review posted.');
     }
 
     public function update(ReviewRequest $request, Review $review): RedirectResponse
@@ -29,7 +29,7 @@ class ReviewController extends Controller
 
         $review->update($request->validated());
 
-        return back()->with('status', 'Your review has been updated.');
+        return back()->with('status', 'Review updated.');
     }
 
     public function destroy(Request $request, Review $review): RedirectResponse

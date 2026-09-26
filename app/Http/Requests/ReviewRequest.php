@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\Book;
 use App\Models\Review;
+use App\Rules\ValidUtf8;
 use Illuminate\Auth\Access\Response;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
@@ -40,7 +41,7 @@ class ReviewRequest extends FormRequest
     {
         return [
             'rating' => ['required', 'integer', 'between:1,5'],
-            'body' => ['required', 'string', 'min:2', 'max:'.Review::MAX_BODY],
+            'body' => ['required', 'string', new ValidUtf8, 'min:2', 'max:'.Review::MAX_BODY],
         ];
     }
 }

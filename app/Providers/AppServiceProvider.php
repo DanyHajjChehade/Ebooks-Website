@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -37,6 +38,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureModels();
+        $this->configureUrls();
         $this->configureAuthorization();
         $this->configureRateLimiting();
 
@@ -54,6 +56,25 @@ class AppServiceProvider extends ServiceProvider
             : Password::min(8));
 
         DB::prohibitDestructiveCommands($this->app->isProduction());
+    }
+
+    /**
+     * In production every absolute URL is built from APP_URL, never from the
+     * request's Host header (defence in depth next to trustHosts()).
+     */
+    public function configureUrls(): void
+    {
+        $appUrl = (string) config('app.url');
+
+        if (! $this->app->isProduction() || parse_url($appUrl, PHP_URL_HOST) === null) {
+            return;
+        }
+
+        URL::forceRootUrl(rtrim($appUrl, '/'));
+
+        if (str_starts_with($appUrl, 'https://')) {
+            URL::forceScheme('https');
+        }
     }
 
     private function configureModels(): void
@@ -80,12 +101,12 @@ class AppServiceProvider extends ServiceProvider
     {
         RateLimiter::for('login', fn (Request $request) => [
             Limit::perMinute(10)->by('login-ip:'.$request->ip()),
-            Limit::perMinute(5)->by('login:'.Str::lower((string) $request->input('email')).'|'.$request->ip()),
+            Limit::perMinute(5)->by('login:'.Str::lower(trim((string) $request->input('email'))).'|'.$request->ip()),
         ]);
 
         RateLimiter::for('password-reset', fn (Request $request) => [
             Limit::perMinute(5)->by('password-reset-ip:'.$request->ip()),
-            Limit::perHour(10)->by('password-reset:'.Str::lower((string) $request->input('email'))),
+            Limit::perHour(10)->by('password-reset:'.Str::lower(trim((string) $request->input('email')))),
         ]);
 
         RateLimiter::for('downloads', fn (Request $request) => Limit::perMinute(20)

@@ -3,7 +3,9 @@
 namespace App\Http\Requests\Admin;
 
 use App\Models\Author;
+use App\Rules\ValidUtf8;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
@@ -20,7 +22,8 @@ class AuthorRequest extends FormRequest
     {
         $this->merge([
             'remove_photo' => $this->boolean('remove_photo'),
-            'slug' => filled($this->input('slug')) ? $this->input('slug') : null,
+            // Normalised here so the unique rule checks the value that will be saved.
+            'slug' => is_string($this->input('slug')) && Str::slug($this->input('slug')) !== '' ? Str::slug($this->input('slug')) : null,
         ]);
     }
 
@@ -33,9 +36,9 @@ class AuthorRequest extends FormRequest
         $author = $this->route('author');
 
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', new ValidUtf8, 'max:255'],
             'slug' => ['nullable', 'string', 'max:190', 'alpha_dash:ascii', Rule::unique('authors', 'slug')->ignore($author?->getKey())],
-            'bio' => ['nullable', 'string', 'max:5000'],
+            'bio' => ['nullable', 'string', new ValidUtf8, 'max:5000'],
             'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.(int) config('bookplanet.max_image_kb'), 'dimensions:max_width=6000,max_height=6000'],
             'remove_photo' => ['boolean'],
         ];

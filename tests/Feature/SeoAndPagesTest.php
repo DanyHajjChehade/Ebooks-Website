@@ -59,5 +59,10 @@ class SeoAndPagesTest extends TestCase
             ->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
             ->assertHeader('Permissions-Policy')
             ->assertHeader('Content-Security-Policy', "frame-ancestors 'self'; base-uri 'self'; object-src 'none'");
+
+        // No obsolete FLoC opt-out, and no form-action (it would block the 303 to Stripe Checkout).
+        $response = $this->get('/');
+        $this->assertStringNotContainsString('interest-cohort', $response->headers->get('Permissions-Policy'));
+        $this->assertStringNotContainsString('form-action', $response->headers->get('Content-Security-Policy'));
     }
 }

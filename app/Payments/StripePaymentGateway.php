@@ -54,6 +54,9 @@ class StripePaymentGateway implements PaymentGateway
                 ],
                 'success_url' => $successUrl,
                 'cancel_url' => $cancelUrl,
+                // Stripe's minimum lifetime is 30 minutes; one extra minute keeps us clear
+                // of the boundary if the request takes a moment to reach Stripe.
+                'expires_at' => now()->addMinutes(31)->getTimestamp(),
                 ...(config('services.stripe.automatic_tax') ? ['automatic_tax' => ['enabled' => true]] : []),
             ], [
                 // Order id + creation time: stable for retries of this order, unique
@@ -78,10 +81,19 @@ class StripePaymentGateway implements PaymentGateway
         return CheckoutSession::fromStripe($session->toArray());
     }
 
+    public function expireCheckoutSession(string $sessionId): void
+    {
+        try {
+            $this->client()->checkout->sessions->expire($sessionId);
+        } catch (ApiErrorException $e) {
+            throw new PaymentGatewayException($e->getMessage(), 0, $e);
+        }
+    }
+
     public function refund(Order $order): void
     {
         if (blank($order->stripe_payment_intent_id)) {
-            throw new PaymentGatewayException("Order {$order->getKey()} has no Stripe payment to refund.");
+            throw new PaymentGatewayException('This order has no Stripe payment to refund.');
         }
 
         try {
@@ -92,7 +104,8 @@ class StripePaymentGateway implements PaymentGateway
                 'idempotency_key' => 'bookplanet-refund-'.$order->getKey().'-'.$order->created_at?->getTimestamp(),
             ]);
         } catch (ApiErrorException $e) {
-            throw new PaymentGatewayException('Stripe could not refund the payment: '.$e->getMessage(), 0, $e);
+            // Stripe's own message (e.g. "Charge ch_… has already been refunded.") is shown to the admin.
+            throw new PaymentGatewayException($e->getMessage(), 0, $e);
         }
     }
 }

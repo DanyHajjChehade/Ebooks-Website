@@ -5,7 +5,9 @@ namespace App\Http\Requests\Admin;
 use App\Models\Book;
 use App\Rules\EbookFile;
 use App\Rules\StripeChargeableAmount;
+use App\Rules\ValidUtf8;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
@@ -27,7 +29,8 @@ class BookRequest extends FormRequest
             'is_published' => $this->boolean('is_published'),
             'is_featured' => $this->boolean('is_featured'),
             'remove_cover' => $this->boolean('remove_cover'),
-            'slug' => filled($this->input('slug')) ? $this->input('slug') : null,
+            // Normalised here so the unique rule checks the value that will be saved.
+            'slug' => is_string($this->input('slug')) && Str::slug($this->input('slug')) !== '' ? Str::slug($this->input('slug')) : null,
             'sale_price' => filled($this->input('sale_price')) ? $this->input('sale_price') : null,
         ]);
     }
@@ -43,9 +46,9 @@ class BookRequest extends FormRequest
         $maxEbook = (int) config('bookplanet.max_ebook_kb');
 
         return [
-            'title' => ['required', 'string', 'max:255'],
+            'title' => ['required', 'string', new ValidUtf8, 'max:255'],
             'slug' => ['nullable', 'string', 'max:190', 'alpha_dash:ascii', Rule::unique('books', 'slug')->ignore($book?->getKey())],
-            'description' => ['required', 'string', 'max:10000'],
+            'description' => ['required', 'string', new ValidUtf8, 'max:10000'],
             'author_id' => ['required', 'integer', Rule::exists('authors', 'id')->whereNull('deleted_at')],
             'category_id' => ['required', 'integer', Rule::exists('categories', 'id')->whereNull('deleted_at')],
             'price' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:9999.99', new StripeChargeableAmount],

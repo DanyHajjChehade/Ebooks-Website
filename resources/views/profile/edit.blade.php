@@ -1,6 +1,6 @@
 {{-- Profile (DESIGN.md §5.3): details, password, delete account (A7: needs the current password). --}}
 @php
-    $words = preg_split('/\s+/u', trim((string) $user->name), -1, PREG_SPLIT_NO_EMPTY);
+    $words = preg_split('/\s+/u', trim((string) $user->name), -1, PREG_SPLIT_NO_EMPTY) ?: array_filter([trim((string) $user->name)]);
     $publicName = $words ? $words[0].(count($words) > 1 ? ' '.mb_strtoupper(mb_substr(end($words), 0, 1)).'.' : '') : '';
     $deletionErrors = $errors->getBag('userDeletion')->any();
 @endphp
@@ -21,7 +21,7 @@
                     <x-input name="email" label="Email" type="email" :value="$user->email" autocomplete="email" required/>
                     <div class="flex flex-wrap items-center gap-4">
                         <button class="btn btn-primary" type="submit" data-busy-label="Saving…">Save changes</button>
-                        @if (session('status') === 'Profile updated.')
+                        @if (session('status') === 'Saved.')
                             <p class="flex items-center gap-1.5 text-sm font-semibold text-success" role="status" data-fade-out="3000"><x-icon name="circle-check" class="icon-sm"/>Saved.</p>
                         @endif
                     </div>

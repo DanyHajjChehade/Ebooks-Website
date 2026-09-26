@@ -10,6 +10,7 @@ use App\Payments\PaymentGatewayException;
 use App\Services\CheckoutService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class OrderController extends Controller
@@ -55,11 +56,15 @@ class OrderController extends Controller
      * Refund a paid order in full through the payment gateway and revoke the
      * library access it granted. Safe to repeat and to race with the
      * `charge.refunded` webhook.
+     *
+     * Flash keys: `status` on success; `error` = the payment provider's reason
+     * (the view titles it "Stripe couldn’t refund this order"); `refund_blocked`
+     * when the order isn't refundable at all (not paid).
      */
     public function refund(Order $order, PaymentGateway $gateway, CheckoutService $checkout): RedirectResponse
     {
         if (! $order->isPaid()) {
-            return back()->with('error', 'Only paid orders can be refunded.');
+            return back()->with('refund_blocked', 'Only paid orders can be refunded.');
         }
 
         if ($order->subtotal_cents > 0) {
@@ -68,13 +73,14 @@ class OrderController extends Controller
             } catch (PaymentGatewayException $e) {
                 report($e);
 
-                return back()->with('error', 'The refund could not be processed: '.$e->getMessage());
+                return back()->with('error', Str::finish(rtrim($e->getMessage()), '.'));
             }
         }
 
-        $checkout->refund($order);
+        $removed = $checkout->refund($order) ?? 0;
+        $books = $removed === 1 ? '1 book' : "{$removed} books";
 
         return redirect()->route('admin.orders.show', $order)
-            ->with('status', "Order {$order->reference} was refunded and its books removed from the customer's library.");
+            ->with('status', "Order #{$order->getKey()} refunded. {$books} removed from the customer’s library.");
     }
 }

@@ -199,8 +199,30 @@ class AdminBookTest extends TestCase
             'price' => '-1',
             'sale_price' => '5',
             'isbn' => '<script>',
-            'slug' => 'Not A Slug!',
-        ])->assertSessionHasErrors(['title', 'description', 'author_id', 'category_id', 'price', 'isbn', 'slug', 'ebook']);
+        ])->assertSessionHasErrors(['title', 'description', 'author_id', 'category_id', 'price', 'isbn', 'ebook']);
+    }
+
+    public function test_slugs_are_normalised_before_the_unique_check(): void
+    {
+        Book::factory()->create(['slug' => 'my-book']);
+
+        // "My_Book" normalises to the existing "my-book": a validation error, not a silent "my-book-2".
+        $this->actingAs($this->admin)->post(route('admin.books.store'), $this->validData(['slug' => 'My_Book']))
+            ->assertSessionHasErrors('slug');
+
+        $this->actingAs($this->admin)->post(route('admin.books.store'), $this->validData(['slug' => '  Brand New: Book! ', 'cover' => null]))
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('books', ['slug' => 'brand-new-book']);
+    }
+
+    public function test_free_text_must_be_valid_utf8(): void
+    {
+        $this->actingAs($this->admin)->post(route('admin.books.store'), $this->validData([
+            'title' => "Bad \xFF title",
+            'description' => "Broken \xC3\x28 bytes",
+        ]))->assertSessionHasErrors(['title', 'description']);
+
+        $this->assertDatabaseCount('books', 0);
     }
 
     public function test_prices_must_be_free_or_at_least_fifty_cents(): void

@@ -28,6 +28,16 @@ class PasswordResetTest extends TestCase
         Notification::assertSentTo($user, ResetPassword::class);
     }
 
+    public function test_reset_link_requests_ignore_email_case(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create(['email' => 'jane@example.com']);
+
+        $this->post('/forgot-password', ['email' => ' JANE@example.com'])->assertSessionHas('status');
+
+        Notification::assertSentTo($user, ResetPassword::class);
+    }
+
     public function test_unknown_emails_get_the_same_response(): void
     {
         Notification::fake();

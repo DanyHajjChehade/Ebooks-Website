@@ -40,6 +40,39 @@ class RegistrationTest extends TestCase
         ])->assertRedirect(route('cart.index'));
     }
 
+    public function test_emails_are_stored_lowercase_and_trimmed(): void
+    {
+        User::factory()->create(['email' => 'taken@example.com']);
+
+        $this->post('/register', [
+            'name' => 'Jane',
+            'email' => ' Jane@Example.com ',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('users', ['email' => 'jane@example.com']);
+
+        // A differently-cased copy of an existing address is still a duplicate.
+        $this->post('/logout');
+        $this->post('/register', [
+            'name' => 'Copycat',
+            'email' => 'TAKEN@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ])->assertSessionHasErrors('email');
+    }
+
+    public function test_names_must_be_valid_utf8(): void
+    {
+        $this->post('/register', [
+            'name' => "Bad \xFF name",
+            'email' => 'utf8@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ])->assertSessionHasErrors('name');
+    }
+
     public function test_registration_cannot_grant_admin(): void
     {
         $this->post('/register', [

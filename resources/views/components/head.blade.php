@@ -12,8 +12,14 @@
     'siteName' => 'Book Planet',
 ])
 @php
-    $description = \Illuminate\Support\Str::limit(trim(preg_replace('/\s+/u', ' ', (string) $description)), 160);
-    $canonical ??= url()->current();
+    // preg_replace returns null on invalid UTF-8: keep the raw text rather than failing.
+    $description = \Illuminate\Support\Str::limit(trim(preg_replace('/\s+/u', ' ', (string) $description) ?? (string) $description), 160);
+    // Default canonical: this URL without its query string, except ?page= when it is past page 1,
+    // so paginated listings don't all point at page 1 and filter/sort variants collapse together.
+    if ($canonical === null) {
+        $page = filter_var(request()->query('page'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: 1;
+        $canonical = url()->current().($page > 1 ? '?page='.$page : '');
+    }
     $ogImage ??= asset('og-default.png');
 @endphp
 <meta charset="utf-8">

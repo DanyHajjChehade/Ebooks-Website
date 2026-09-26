@@ -63,6 +63,17 @@ class AuthenticationTest extends TestCase
             ->assertRedirect('/orders');
     }
 
+    public function test_login_ignores_email_case_and_surrounding_spaces(): void
+    {
+        $user = User::factory()->create(['email' => 'jane@example.com']);
+
+        $this->post('/login', ['email' => '  Jane@Example.COM ', 'password' => 'password'])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('library.index'));
+
+        $this->assertAuthenticatedAs($user);
+    }
+
     public function test_users_can_not_authenticate_with_invalid_password(): void
     {
         $user = User::factory()->create();

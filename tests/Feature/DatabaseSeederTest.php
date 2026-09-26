@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\Setting;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -44,6 +45,35 @@ class DatabaseSeederTest extends TestCase
         });
 
         $this->assertGreaterThan(0, Order::where('status', 'paid')->count());
+    }
+
+    public function test_the_seeder_refuses_to_run_in_production(): void
+    {
+        Storage::fake('local');
+        $this->app['env'] = 'production';
+
+        $this->artisan('db:seed', ['--force' => true])
+            ->expectsOutputToContain('Demo data is not seeded in production')
+            ->assertSuccessful();
+
+        $this->assertDatabaseCount('users', 0);
+        $this->assertDatabaseCount('books', 0);
+        $this->assertDatabaseCount('settings', 0);
+    }
+
+    public function test_a_production_store_needs_no_seed_data(): void
+    {
+        $this->app['env'] = 'production';
+        $this->withoutMiddleware(PreventRequestForgery::class);
+
+        // No settings row: pages render with defaults.
+        $this->get('/')->assertOk()->assertViewHas('settings', fn (Setting $s) => ! $s->exists && $s->site_name === config('app.name'));
+
+        // The first save in the admin area creates the row.
+        $this->actingAs($this->admin())->put(route('admin.settings.update'), ['site_name' => 'My Shop'])->assertSessionHasNoErrors();
+
+        $this->assertSame('My Shop', Setting::sole()->site_name);
+        $this->assertSame('My Shop', Setting::current()->site_name);
     }
 
     public function test_seeded_pages_render(): void

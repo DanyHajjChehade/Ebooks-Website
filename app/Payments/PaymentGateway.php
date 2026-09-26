@@ -23,6 +23,13 @@ interface PaymentGateway
     public function retrieveCheckoutSession(string $sessionId): CheckoutSession;
 
     /**
+     * Close an open checkout session so it can no longer be paid. Throws
+     * PaymentGatewayException when the provider refuses, e.g. because the
+     * session was already completed (paid) or has already expired.
+     */
+    public function expireCheckoutSession(string $sessionId): void;
+
+    /**
      * Fully refund the payment behind a paid order. Must be safe to call
      * twice for the same order (idempotency key).
      */

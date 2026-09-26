@@ -3,7 +3,7 @@
     $q = $filters['q'] ?? null;
     $total = $authors->total();
 @endphp
-<x-layouts.app :title="$q ? 'Authors matching “'.$q.'”' : 'Authors'" description="Meet the writers behind our ebooks: novelists, essayists and poets." :canonical="$authors->currentPage() > 1 ? route('authors.index', ['page' => $authors->currentPage()]) : route('authors.index')" :noindex="(bool) $q">
+<x-layouts.app :title="$q ? 'Authors matching “'.$q.'”' : 'Authors'" description="Meet the writers behind our ebooks: novelists, essayists and poets." :noindex="(bool) $q">
     <div class="container-page py-section-sm">
         <header class="mb-8 grid gap-2">
             <h1 class="h1">Authors</h1>

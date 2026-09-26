@@ -1,7 +1,8 @@
 {{-- Initials avatar (A9: no uploads). Authors may pass :photo. size: sm | md | lg | xl --}}
 @props(['name' => '', 'id' => 0, 'size' => 'md', 'photo' => null])
 @php
-    $words = preg_split('/\s+/u', trim((string) $name), -1, PREG_SPLIT_NO_EMPTY);
+    // preg_split returns false on invalid UTF-8: fall back to the raw text.
+    $words = preg_split('/\s+/u', trim((string) $name), -1, PREG_SPLIT_NO_EMPTY) ?: array_filter([trim((string) $name)]);
     $initials = '';
     if ($words) {
         $initials = mb_strtoupper(mb_substr($words[0], 0, 1));

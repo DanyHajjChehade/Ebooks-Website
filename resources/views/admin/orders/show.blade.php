@@ -25,6 +25,8 @@
 
     @if (session('error'))
         <x-alert variant="danger" title="Stripe couldn’t refund this order">{{ session('error') }} Nothing was changed.</x-alert>
+    @elseif (session('refund_blocked'))
+        <x-alert variant="danger" title="Refund not issued">{{ session('refund_blocked') }}</x-alert>
     @endif
 
     <div class="grid grid-cols-1 gap-6 xl:grid-cols-12 xl:gap-8">

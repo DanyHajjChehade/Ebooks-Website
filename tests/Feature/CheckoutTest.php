@@ -278,6 +278,6 @@ class CheckoutTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->get('/checkout/cancel')
             ->assertRedirect(route('cart.index'))
-            ->assertSessionHas('status');
+            ->assertSessionHas('status', 'Checkout cancelled. Your books are still in your cart.');
     }
 }

@@ -15,11 +15,11 @@ class ReviewPolicy
     public function create(User $user, Book $book): Response
     {
         if (! $user->ownsBook($book)) {
-            return Response::deny('Only readers who own this book can review it.');
+            return Response::deny('Only readers who bought this book can review it.');
         }
 
         if ($user->reviews()->where('book_id', $book->getKey())->exists()) {
-            return Response::deny('You have already reviewed this book.');
+            return Response::deny('You’ve already reviewed this book.');
         }
 
         return Response::allow();

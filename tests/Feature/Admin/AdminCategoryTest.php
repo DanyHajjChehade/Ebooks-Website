@@ -52,6 +52,18 @@ class AdminCategoryTest extends TestCase
             ->assertSessionHasErrors(['name', 'slug']);
     }
 
+    public function test_category_slugs_are_normalised_and_text_must_be_valid_utf8(): void
+    {
+        $this->actingAs($this->admin)->post(route('admin.categories.store'), ['name' => 'Sci-Fi', 'slug' => ' Science Fiction! '])
+            ->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('categories', ['slug' => 'science-fiction']);
+
+        $this->actingAs($this->admin)->post(route('admin.categories.store'), ['name' => 'Again', 'slug' => 'SCIENCE_FICTION'])
+            ->assertSessionHasErrors('slug');
+        $this->actingAs($this->admin)->post(route('admin.categories.store'), ['name' => "Bad \xFF", 'description' => "\xFE"])
+            ->assertSessionHasErrors(['name', 'description']);
+    }
+
     public function test_slugs_from_deleted_categories_are_not_reused(): void
     {
         $old = Category::factory()->create(['name' => 'Mystery']);

@@ -53,7 +53,7 @@
                 <x-input name="page_count" label="Pages" optional type="number" min="1" max="100000" inputmode="numeric" :value="$book->page_count"/>
                 <x-input name="isbn" label="ISBN" optional :value="$book->isbn" maxlength="20" autocomplete="off"/>
             </div>
-            <x-input class="sm:max-w-xs" name="published_at" label="Publication date" optional type="datetime-local" :value="$book->published_at?->format('Y-m-d\TH:i')" hint="Leave empty to publish as soon as the book is visible. A future date schedules it."/>
+            <x-input class="sm:max-w-xs" name="published_at" label="Publication date (UTC)" optional type="datetime-local" :value="$book->published_at?->format('Y-m-d\TH:i')" hint="Leave empty to publish as soon as the book is visible. A future date schedules it."/>
         </section>
     </div>
 
@@ -74,7 +74,7 @@
             @else
                 <p class="text-center text-sm text-muted">No image yet: the shop shows this generated cover.</p>
             @endif
-            <x-file-input name="cover" :label="$book->cover_path ? 'Replace the image' : 'Cover image'" optional kind="cover" accept="image/jpeg,image/png,image/webp" :constraint="'JPG, PNG or WebP · at least 800 × 1200 px · up to '.$maxImageMb.' MB'"/>
+            <x-file-input name="cover" :label="$book->cover_path ? 'Replace the image' : 'Cover image'" optional kind="cover" accept="image/jpeg,image/png,image/webp" :constraint="'JPG, PNG or WebP, up to '.$maxImageMb.' MB. Recommended: 800 × 1200 px or larger (2:3).'"/>
         </section>
 
         <section class="card grid gap-4 p-5 sm:p-6" aria-labelledby="file-h">

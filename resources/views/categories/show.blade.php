@@ -1,6 +1,6 @@
 {{-- Category shelf (DESIGN.md §5.1 categories.show). --}}
 @php $total = $books->total(); @endphp
-<x-layouts.app :title="$category->name" :description="\Illuminate\Support\Str::limit(trim((string) $category->description) ?: $category->name.' ebooks, ready to download as EPUB and PDF.', 155)" :canonical="$books->currentPage() > 1 ? route('categories.show', [$category, 'page' => $books->currentPage()]) : route('categories.show', $category)">
+<x-layouts.app :title="$category->name" :description="\Illuminate\Support\Str::limit(trim((string) $category->description) ?: $category->name.' ebooks, ready to download as EPUB and PDF.', 155)">
     <div class="container-page py-section-sm">
         <x-breadcrumbs class="mb-6" :items="[['Books', route('books.index')], [$category->name]]"/>
         <header class="mb-10 grid gap-3">

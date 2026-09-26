@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Rules\ValidUtf8;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -23,11 +24,11 @@ class SettingRequest extends FormRequest
         $url = ['nullable', 'url:https,http', 'max:255'];
 
         return [
-            'site_name' => ['required', 'string', 'max:100'],
-            'tagline' => ['nullable', 'string', 'max:255'],
+            'site_name' => ['required', 'string', new ValidUtf8, 'max:100'],
+            'tagline' => ['nullable', 'string', new ValidUtf8, 'max:255'],
             'contact_email' => ['nullable', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:50'],
-            'address' => ['nullable', 'string', 'max:500'],
+            'phone' => ['nullable', 'string', new ValidUtf8, 'max:50'],
+            'address' => ['nullable', 'string', new ValidUtf8, 'max:500'],
             'facebook_url' => $url,
             'instagram_url' => $url,
             'x_url' => $url,

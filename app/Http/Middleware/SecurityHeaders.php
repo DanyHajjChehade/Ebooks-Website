@@ -19,10 +19,12 @@ class SecurityHeaders
             'X-Content-Type-Options' => 'nosniff',
             'X-Frame-Options' => 'SAMEORIGIN',
             'Referrer-Policy' => 'strict-origin-when-cross-origin',
-            'Permissions-Policy' => 'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=(), interest-cohort=()',
+            'Permissions-Policy' => 'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()',
             'Cross-Origin-Opener-Policy' => 'same-origin',
-            // Only frame-ancestors / base-uri / form-action here: a full script/style
-            // CSP would have to track Vite's dev server and any font CDN.
+            // Deliberately minimal: frame-ancestors, base-uri and object-src only.
+            // No script/style sources (they would have to track Vite's dev server),
+            // and no form-action: browsers apply it to the redirect after a form
+            // POST, so it would block checkout's 303 to checkout.stripe.com.
             'Content-Security-Policy' => "frame-ancestors 'self'; base-uri 'self'; object-src 'none'",
         ];
 

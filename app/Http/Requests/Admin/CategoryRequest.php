@@ -3,7 +3,9 @@
 namespace App\Http\Requests\Admin;
 
 use App\Models\Category;
+use App\Rules\ValidUtf8;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
@@ -19,7 +21,8 @@ class CategoryRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'slug' => filled($this->input('slug')) ? $this->input('slug') : null,
+            // Normalised here so the unique rule checks the value that will be saved.
+            'slug' => is_string($this->input('slug')) && Str::slug($this->input('slug')) !== '' ? Str::slug($this->input('slug')) : null,
         ]);
     }
 
@@ -32,9 +35,9 @@ class CategoryRequest extends FormRequest
         $category = $this->route('category');
 
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', new ValidUtf8, 'max:255'],
             'slug' => ['nullable', 'string', 'max:190', 'alpha_dash:ascii', Rule::unique('categories', 'slug')->ignore($category?->getKey())],
-            'description' => ['nullable', 'string', 'max:2000'],
+            'description' => ['nullable', 'string', new ValidUtf8, 'max:2000'],
         ];
     }
 }

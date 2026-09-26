@@ -199,6 +199,38 @@ class StripeWebhookTest extends TestCase
         $this->assertTrue($this->user->ownsBook($this->book));
     }
 
+    public function test_a_lost_chargeback_revokes_access(): void
+    {
+        app(CheckoutService::class)->fulfil($this->order, 'pi_disputed');
+
+        $this->postStripeEvent('charge.dispute.closed', [
+            'id' => 'dp_1',
+            'object' => 'dispute',
+            'charge' => 'ch_1',
+            'payment_intent' => 'pi_disputed',
+            'amount' => 1500,
+            'status' => 'lost',
+        ])->assertOk();
+
+        $this->assertSame(OrderStatus::Refunded, $this->order->refresh()->status);
+        $this->assertFalse($this->user->ownsBook($this->book));
+    }
+
+    public function test_a_won_chargeback_keeps_access(): void
+    {
+        app(CheckoutService::class)->fulfil($this->order, 'pi_disputed');
+
+        $this->postStripeEvent('charge.dispute.closed', [
+            'id' => 'dp_2',
+            'object' => 'dispute',
+            'payment_intent' => 'pi_disputed',
+            'status' => 'won',
+        ])->assertOk();
+
+        $this->assertSame(OrderStatus::Paid, $this->order->refresh()->status);
+        $this->assertTrue($this->user->ownsBook($this->book));
+    }
+
     public function test_unknown_event_types_are_acknowledged(): void
     {
         $this->postStripeEvent('customer.created', ['id' => 'cus_1', 'object' => 'customer'])->assertOk();
