@@ -1,0 +1,79 @@
+<?php
+
+namespace App\Payments;
+
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\User;
+use Stripe\Exception\ApiErrorException;
+use Stripe\StripeClient;
+
+class StripePaymentGateway implements PaymentGateway
+{
+    /**
+     * @param  StripeClient|null  $stripe  null when STRIPE_SECRET is not configured
+     */
+    public function __construct(private readonly ?StripeClient $stripe) {}
+
+    private function client(): StripeClient
+    {
+        return $this->stripe ?? throw new PaymentGatewayException('Stripe is not configured: set STRIPE_SECRET.');
+    }
+
+    public function createCheckoutSession(Order $order, User $customer, string $successUrl, string $cancelUrl): CheckoutSession
+    {
+        $order->loadMissing('items');
+
+        // Free items in a paid order are granted on fulfilment but not sent to
+        // Stripe (a $0 line item adds nothing to the charge).
+        $lineItems = $order->items
+            ->filter(fn (OrderItem $item) => $item->price_cents > 0)
+            ->map(fn (OrderItem $item) => [
+                'quantity' => 1,
+                'price_data' => [
+                    'currency' => $order->currency,
+                    'unit_amount' => $item->price_cents,
+                    'product_data' => [
+                        'name' => $item->title,
+                        'metadata' => ['book_id' => (string) $item->book_id],
+                    ],
+                ],
+            ])
+            ->values()
+            ->all();
+
+        try {
+            $session = $this->client()->checkout->sessions->create([
+                'mode' => 'payment',
+                'customer_email' => $customer->email,
+                'client_reference_id' => (string) $customer->getKey(),
+                'line_items' => $lineItems,
+                'metadata' => ['order_id' => (string) $order->getKey()],
+                'payment_intent_data' => [
+                    'metadata' => ['order_id' => (string) $order->getKey()],
+                ],
+                'success_url' => $successUrl,
+                'cancel_url' => $cancelUrl,
+            ], [
+                // Order id + creation time: stable for retries of this order, unique
+                // across databases that reuse ids (e.g. after migrate:fresh in dev).
+                'idempotency_key' => 'bookplanet-order-'.$order->getKey().'-'.$order->created_at?->getTimestamp(),
+            ]);
+        } catch (ApiErrorException $e) {
+            throw new PaymentGatewayException('Stripe could not create a checkout session: '.$e->getMessage(), 0, $e);
+        }
+
+        return CheckoutSession::fromStripe($session->toArray());
+    }
+
+    public function retrieveCheckoutSession(string $sessionId): CheckoutSession
+    {
+        try {
+            $session = $this->client()->checkout->sessions->retrieve($sessionId);
+        } catch (ApiErrorException $e) {
+            throw new PaymentGatewayException('Stripe could not retrieve checkout session: '.$e->getMessage(), 0, $e);
+        }
+
+        return CheckoutSession::fromStripe($session->toArray());
+    }
+}

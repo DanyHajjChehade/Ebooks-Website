@@ -1,51 +1,81 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthorController;
+use App\Http\Controllers\BookController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\BookController;
+use App\Http\Controllers\LibraryController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\SeoController;
+use App\Http\Controllers\StripeWebhookController;
+use Illuminate\Support\Facades\Route;
+
 /*
 |--------------------------------------------------------------------------
-| Web Routes
+| Storefront
 |--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
-|
 */
 
-Route::get('/', [HomeController::class, 'index'])->name('index');
-Route::get('/books/ajax',[BookController::class,'search'])->name('home.books.ajax');
+Route::get('/', HomeController::class)->name('home');
 
-Route::get('/author/{author:first_name}/books',[AuthorController::class,'index']);
-Route::get('/author/ajax',[AuthorController::class,'search'])->name('author.ajax');
-Route::get('/author/books/ajax',[AuthorController::class,'searchbooks'])->name('author.books.ajax');
+Route::get('/books', [BookController::class, 'index'])->name('books.index');
+Route::get('/books/{book:slug}', [BookController::class, 'show'])->name('books.show');
 
-Route::get('/category/{category:name}/books',[CategoryController::class,'index']);
-Route::get('/category/books/ajax',[CategoryController::class,'search'])->name('category.books.ajax');
+Route::get('/authors', [AuthorController::class, 'index'])->name('authors.index');
+Route::get('/authors/{author:slug}', [AuthorController::class, 'show'])->name('authors.show');
 
-Route::get('/cart',[CartController::class,'index'])->name('cart.index');
-Route::post('/cart',[CartController::class,'store'])->name('cart.store');
-Route::delete('/cart/remove/{rowId}', [CartController::class, 'remove'])->name('cart.remove');
+Route::get('/categories/{category:slug}', [CategoryController::class, 'show'])->name('categories.show');
 
+Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+Route::post('/cart', [CartController::class, 'store'])->middleware('throttle:cart')->name('cart.store');
+Route::delete('/cart/{book}', [CartController::class, 'destroy'])->whereNumber('book')->name('cart.destroy');
 
-Route::get('/logout',function(){
-    return redirect()->route('index');
-});
+Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
+Route::get('/robots.txt', [SeoController::class, 'robots'])->name('robots');
 
-
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+/*
+|--------------------------------------------------------------------------
+| Payments
+|--------------------------------------------------------------------------
+*/
 
 Route::middleware('auth')->group(function () {
+    Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:checkout')->name('checkout.store');
+    Route::get('/checkout/success', [CheckoutController::class, 'success'])->name('checkout.success');
+    Route::get('/checkout/cancel', [CheckoutController::class, 'cancel'])->name('checkout.cancel');
+});
+
+// CSRF-exempt (see bootstrap/app.php); authenticity comes from the Stripe signature.
+Route::post('/stripe/webhook', StripeWebhookController::class)->name('stripe.webhook');
+
+/*
+|--------------------------------------------------------------------------
+| Account
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware('auth')->group(function () {
+    Route::get('/library', [LibraryController::class, 'index'])->name('library.index');
+    Route::get('/library/{book:slug}/download', [LibraryController::class, 'download'])
+        ->withTrashed()
+        ->middleware('throttle:downloads')
+        ->name('library.download');
+
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::post('/books/{book:slug}/reviews', [ReviewController::class, 'store'])->middleware('throttle:reviews')->name('reviews.store');
+    Route::patch('/reviews/{review}', [ReviewController::class, 'update'])->middleware('throttle:reviews')->name('reviews.update');
+    Route::delete('/reviews/{review}', [ReviewController::class, 'destroy'])->name('reviews.destroy');
 });
 
 require __DIR__.'/auth.php';
+require __DIR__.'/admin.php';

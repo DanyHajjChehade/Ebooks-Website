@@ -2,84 +2,55 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\UserUpdateRequest;
-use App\Models\Req;
-use Illuminate\Http\Request;
+use App\Http\Requests\DeleteAccountRequest;
+use App\Http\Requests\ProfileUpdateRequest;
 use App\Models\User;
-use App\Utils\ImageUpload;
-use App\Models\Order;
-use App\Models\OrderDetails;
-use App\Models\Book;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 
 class ProfileController extends Controller
 {
-    public function index(User $user)
+    public function edit(Request $request): View
     {
-        return view('components.member.dashboard',compact('user'));
-    }
-
-    public function update(UserUpdateRequest $request,User $user)
-    {
-        $user->update($request->validated());
-        if ($request->hasFile('image')) {
-            $image=ImageUpload::uploadimage($request->image,100,200,'profile/');
-            $user->update(['image'=>$image]);
-     }
-
-
-        return redirect()->route('user.profile', $user->username)->with('success', 'User updated successfully');
-    }
-    public function request(User $user)
-    {
-        if($user->usertype==0)
-        {
-            if ($user->request == null) {
-                // Create a new request
-                $request = new Req();
-                $request->user_id = $user->id;
-                $request->save();
-                return redirect()->route('user.profile', $user->username)->with('success', ' Your Request has been send successfully');
-
-            }
-
-            return redirect()->route('user.profile', $user->username)->with('error', ' Your Request has been send already');
-        }
-        return redirect()->route('user.profile', $user->username)->with('already', ' You are already an admin');
-
-
-    }
-
-    public function orders(User $user)
-    {
-        $orders=$user->orders;
-        return view('components.member.ManageBooks',compact('orders'));
-    }
-    public function cancel(User $user,$orderid)
-    {
-        $order=Order::findOrFail($orderid);
-        $order->update([
-            'status'=>'Canceled'
+        return view('profile.edit', [
+            'user' => $request->user(),
         ]);
-        $orderDetails = OrderDetails::where('order_id', $orderid)->get();
+    }
 
-        foreach ($orderDetails as $detail) {
-            $book = Book::find($detail->book_id);
-            if ($book) {
-                // Adjust the stock
-                $book->copies_owned += $detail->quantity;
-                $book->save();
-            }
+    public function update(ProfileUpdateRequest $request): RedirectResponse
+    {
+        $user = $request->user();
+        $user->fill($request->validated());
+
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
         }
 
+        $user->save();
 
-        return redirect()->route('user.orders',['user'=>$user]);
+        return redirect()->route('profile.edit')->with('status', 'Profile updated.');
     }
-    public function delete(User $user,$orderid)
+
+    public function destroy(DeleteAccountRequest $request): RedirectResponse
     {
-        $order=Order::findOrFail($orderid);
-        $order->delete();
-        return redirect()->route('user.orders',['user'=>$user]);
+        $user = $request->user();
+
+        if ($user->isAdmin() && User::query()->where('is_admin', true)->count() === 1) {
+            return back()->withErrors(
+                ['password' => 'You are the only administrator. Promote another admin before deleting your account.'],
+                'userDeletion',
+            );
+        }
+
+        Auth::logout();
+
+        $user->delete();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('home')->with('status', 'Your account has been deleted.');
     }
-
-
 }
