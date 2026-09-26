@@ -124,13 +124,13 @@ class CheckoutService
             return $order;
         }
 
-        if ($session->amountTotal !== $order->subtotal_cents
+        if ($session->goodsAmount() !== $order->subtotal_cents
             || ($session->currency !== null && $session->currency !== $order->currency)) {
             Log::error('Checkout session amount mismatch; not fulfilling', [
                 'order_id' => $order->getKey(),
                 'session' => $session->id,
                 'expected' => $order->subtotal_cents.' '.$order->currency,
-                'received' => $session->amountTotal.' '.$session->currency,
+                'received' => $session->goodsAmount().' '.$session->currency,
             ]);
 
             return $order;
@@ -205,7 +205,11 @@ class CheckoutService
             return null;
         }
 
-        if (($charge['refunded'] ?? false) !== true) {
+        $amount = (int) ($charge['amount'] ?? 0);
+        $refundedAmount = (int) ($charge['amount_refunded'] ?? 0);
+        $fullyRefunded = ($charge['refunded'] ?? false) === true || ($amount > 0 && $refundedAmount >= $amount);
+
+        if (! $fullyRefunded) {
             Log::info('Partial refund recorded in Stripe; access kept', ['order_id' => $order->getKey()]);
 
             return $order;

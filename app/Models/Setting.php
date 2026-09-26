@@ -24,6 +24,8 @@ class Setting extends Model
         'site_name',
         'tagline',
         'contact_email',
+        'phone',
+        'address',
         'facebook_url',
         'instagram_url',
         'x_url',

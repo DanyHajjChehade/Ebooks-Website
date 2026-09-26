@@ -54,6 +54,7 @@ class StripePaymentGateway implements PaymentGateway
                 ],
                 'success_url' => $successUrl,
                 'cancel_url' => $cancelUrl,
+                ...(config('services.stripe.automatic_tax') ? ['automatic_tax' => ['enabled' => true]] : []),
             ], [
                 // Order id + creation time: stable for retries of this order, unique
                 // across databases that reuse ids (e.g. after migrate:fresh in dev).
@@ -75,5 +76,23 @@ class StripePaymentGateway implements PaymentGateway
         }
 
         return CheckoutSession::fromStripe($session->toArray());
+    }
+
+    public function refund(Order $order): void
+    {
+        if (blank($order->stripe_payment_intent_id)) {
+            throw new PaymentGatewayException("Order {$order->getKey()} has no Stripe payment to refund.");
+        }
+
+        try {
+            $this->client()->refunds->create([
+                'payment_intent' => $order->stripe_payment_intent_id,
+                'metadata' => ['order_id' => (string) $order->getKey()],
+            ], [
+                'idempotency_key' => 'bookplanet-refund-'.$order->getKey().'-'.$order->created_at?->getTimestamp(),
+            ]);
+        } catch (ApiErrorException $e) {
+            throw new PaymentGatewayException('Stripe could not refund the payment: '.$e->getMessage(), 0, $e);
+        }
     }
 }

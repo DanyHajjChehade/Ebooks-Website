@@ -5,7 +5,11 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\OrderIndexRequest;
 use App\Models\Order;
+use App\Payments\PaymentGateway;
+use App\Payments\PaymentGatewayException;
+use App\Services\CheckoutService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class OrderController extends Controller
@@ -45,5 +49,32 @@ class OrderController extends Controller
         return view('admin.orders.show', [
             'order' => $order->load(['user', 'items.book.author']),
         ]);
+    }
+
+    /**
+     * Refund a paid order in full through the payment gateway and revoke the
+     * library access it granted. Safe to repeat and to race with the
+     * `charge.refunded` webhook.
+     */
+    public function refund(Order $order, PaymentGateway $gateway, CheckoutService $checkout): RedirectResponse
+    {
+        if (! $order->isPaid()) {
+            return back()->with('error', 'Only paid orders can be refunded.');
+        }
+
+        if ($order->subtotal_cents > 0) {
+            try {
+                $gateway->refund($order);
+            } catch (PaymentGatewayException $e) {
+                report($e);
+
+                return back()->with('error', 'The refund could not be processed: '.$e->getMessage());
+            }
+        }
+
+        $checkout->refund($order);
+
+        return redirect()->route('admin.orders.show', $order)
+            ->with('status', "Order {$order->reference} was refunded and its books removed from the customer's library.");
     }
 }

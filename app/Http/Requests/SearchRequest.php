@@ -1,11 +1,10 @@
 <?php
 
-namespace App\Http\Requests\Admin;
+namespace App\Http\Requests;
 
-use App\Http\Requests\FilterRequest;
 
 /**
- * Plain `?q=` search used by the authors and categories lists.
+ * Plain `?q=` search (storefront authors list, admin authors/categories).
  */
 class SearchRequest extends FilterRequest
 {

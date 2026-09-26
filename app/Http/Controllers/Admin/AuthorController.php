@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AuthorRequest;
-use App\Http\Requests\Admin\SearchRequest;
+use App\Http\Requests\SearchRequest;
 use App\Models\Author;
 use App\Services\UploadStorage;
 use Illuminate\Database\Eloquent\Builder;
@@ -77,7 +77,7 @@ class AuthorController extends Controller
     public function destroy(Author $author): RedirectResponse
     {
         if ($author->books()->exists()) {
-            return back()->with('error', "{$author->name} still has books. Reassign or delete them first.");
+            return back()->withErrors(['delete' => "{$author->name} still has books in the store. Reassign or delete them first."]);
         }
 
         $author->delete();

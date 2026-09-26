@@ -21,4 +21,10 @@ interface PaymentGateway
      * Fetch the authoritative state of a checkout session from the provider.
      */
     public function retrieveCheckoutSession(string $sessionId): CheckoutSession;
+
+    /**
+     * Fully refund the payment behind a paid order. Must be safe to call
+     * twice for the same order (idempotency key).
+     */
+    public function refund(Order $order): void;
 }

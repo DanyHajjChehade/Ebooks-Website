@@ -13,6 +13,8 @@ return new class extends Migration
             $table->string('site_name');
             $table->string('tagline')->nullable();
             $table->string('contact_email')->nullable();
+            $table->string('phone', 50)->nullable();
+            $table->string('address', 500)->nullable();
             $table->string('facebook_url')->nullable();
             $table->string('instagram_url')->nullable();
             $table->string('x_url')->nullable();

@@ -1,28 +1,27 @@
 <?php
 
-namespace Database\Factories;
+namespace Database\Seeders;
 
 use App\Models\Setting;
-use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Database\Seeder;
 
-/**
- * @extends Factory<Setting>
- */
-class SettingFactory extends Factory
+class SettingSeeder extends Seeder
 {
-    public function definition(): array
+    public function run(): void
     {
-        return [
+        $setting = Setting::query()->oldest('id')->first() ?? new Setting;
+
+        $setting->fill([
             'site_name' => 'Book Planet',
             'tagline' => 'Independent ebooks, beautifully made.',
             'contact_email' => 'hello@bookplanet.test',
             'phone' => null,
             'address' => null,
             'facebook_url' => null,
-            'instagram_url' => 'https://instagram.com/bookplanet',
+            'instagram_url' => 'https://www.instagram.com/',
             'x_url' => null,
             'youtube_url' => null,
             'tiktok_url' => null,
-        ];
+        ])->save();
     }
 }

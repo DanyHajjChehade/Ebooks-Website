@@ -7,6 +7,7 @@ use App\Http\Requests\CheckoutSuccessRequest;
 use App\Models\Order;
 use App\Payments\PaymentGateway;
 use App\Payments\PaymentGatewayException;
+use App\Rules\StripeChargeableAmount;
 use App\Services\Cart;
 use App\Services\CheckoutService;
 use Illuminate\Http\RedirectResponse;
@@ -31,6 +32,14 @@ class CheckoutController extends Controller
 
         if ($books->isEmpty()) {
             return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
+        }
+
+        $subtotal = $this->cart->subtotalCents();
+
+        // Admin validation keeps prices at 0 or >= 50 cents; guard anyway (Stripe's minimum charge).
+        if ($subtotal > 0 && $subtotal < StripeChargeableAmount::MINIMUM_CENTS) {
+            return redirect()->route('cart.index')
+                ->with('error', 'Card payments must be at least 0.50. Add another book to check out.');
         }
 
         $user = $request->user();

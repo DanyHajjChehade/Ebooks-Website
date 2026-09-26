@@ -17,7 +17,9 @@ class UploadStorage
      */
     public function storeEbook(UploadedFile $file): array
     {
-        $format = strtolower($file->getClientOriginalExtension()) === 'epub' ? 'epub' : 'pdf';
+        // Derived from the sniffed content type (already validated by EbookFile),
+        // never from the client-supplied file name.
+        $format = $file->getMimeType() === 'application/pdf' ? 'pdf' : 'epub';
 
         $path = $file->storeAs('ebooks', Str::random(40).'.'.$format, [
             'disk' => config('bookplanet.ebook_disk'),

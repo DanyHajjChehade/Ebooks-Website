@@ -22,6 +22,7 @@ Route::middleware(['auth', 'can:access-admin'])
 
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+        Route::post('orders/{order}/refund', [OrderController::class, 'refund'])->name('orders.refund');
 
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::patch('users/{user}/toggle-admin', [UserController::class, 'toggleAdmin'])->name('users.toggle-admin');

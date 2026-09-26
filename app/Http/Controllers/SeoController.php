@@ -35,6 +35,10 @@ class SeoController extends Controller
         $add(route('books.index'), null, '0.9');
         $add(route('authors.index'), null, '0.6');
 
+        foreach (['pages.contact', 'pages.terms', 'pages.privacy', 'pages.refunds'] as $page) {
+            $add(route($page), null, '0.3');
+        }
+
         Book::query()->published()->select(['id', 'slug', 'updated_at'])->orderBy('id')
             ->lazy()->each(fn (Book $book) => $add(route('books.show', $book), $book->updated_at, '0.8'));
 

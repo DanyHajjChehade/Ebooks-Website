@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\CategoryRequest;
-use App\Http\Requests\Admin\SearchRequest;
+use App\Http\Requests\SearchRequest;
 use App\Models\Category;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -56,7 +56,7 @@ class CategoryController extends Controller
     public function destroy(Category $category): RedirectResponse
     {
         if ($category->books()->exists()) {
-            return back()->with('error', "{$category->name} still has books. Move them to another category first.");
+            return back()->withErrors(['delete' => "{$category->name} still has books in the store. Move them to another category first."]);
         }
 
         $category->delete();

@@ -3,13 +3,17 @@
 namespace App\View\Composers;
 
 use App\Models\Setting;
+use App\Models\User;
 use App\Services\Cart;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * Shares `$settings` (App\Models\Setting, cached) and `$cartCount` (int) with
- * every view. Values are computed once per request.
+ * Shares with every view (computed once per request):
+ *  - $settings      App\Models\Setting (cached; unsaved defaults if no row yet)
+ *  - $cartCount     int
+ *  - $cartBookIds   list<int>  purchasable books in the cart
+ *  - $ownedBookIds  list<int>  books in the signed-in user's library ([] for guests)
  */
 class SiteComposer
 {
@@ -25,9 +29,17 @@ class SiteComposer
         $shared = $this->request->attributes->get(self::MEMO_KEY);
 
         if (! is_array($shared)) {
+            $cartBookIds = $this->request->hasSession()
+                ? $this->cart->items()->pluck('id')->map(fn ($id) => (int) $id)->all()
+                : [];
+
+            $user = $this->request->user();
+
             $shared = [
                 'settings' => Setting::current(),
-                'cartCount' => $this->request->hasSession() ? $this->cart->count() : 0,
+                'cartCount' => count($cartBookIds),
+                'cartBookIds' => $cartBookIds,
+                'ownedBookIds' => $user instanceof User ? $user->ownedBookIds() : [],
             ];
 
             $this->request->attributes->set(self::MEMO_KEY, $shared);

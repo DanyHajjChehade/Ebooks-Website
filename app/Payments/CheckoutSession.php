@@ -15,6 +15,7 @@ final readonly class CheckoutSession
         public ?string $currency,
         public ?int $orderId,
         public ?string $paymentIntentId = null,
+        public ?int $amountSubtotal = null,
     ) {}
 
     /**
@@ -39,7 +40,17 @@ final readonly class CheckoutSession
             currency: isset($data['currency']) ? strtolower((string) $data['currency']) : null,
             orderId: is_numeric($orderId) ? (int) $orderId : null,
             paymentIntentId: is_string($paymentIntent) ? $paymentIntent : null,
+            amountSubtotal: isset($data['amount_subtotal']) ? (int) $data['amount_subtotal'] : null,
         );
+    }
+
+    /**
+     * Amount of the goods before tax. With Stripe Tax enabled the total also
+     * includes tax, so this is what must match our order subtotal.
+     */
+    public function goodsAmount(): ?int
+    {
+        return $this->amountSubtotal ?? $this->amountTotal;
     }
 
     public function isPaid(): bool

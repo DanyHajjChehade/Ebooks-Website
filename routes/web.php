@@ -34,6 +34,11 @@ Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
 Route::post('/cart', [CartController::class, 'store'])->middleware('throttle:cart')->name('cart.store');
 Route::delete('/cart/{book}', [CartController::class, 'destroy'])->whereNumber('book')->name('cart.destroy');
 
+Route::view('/terms', 'pages.terms')->name('pages.terms');
+Route::view('/privacy', 'pages.privacy')->name('pages.privacy');
+Route::view('/refund-policy', 'pages.refunds')->name('pages.refunds');
+Route::view('/contact', 'pages.contact')->name('pages.contact');
+
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap'])->name('sitemap');
 Route::get('/robots.txt', [SeoController::class, 'robots'])->name('robots');
 

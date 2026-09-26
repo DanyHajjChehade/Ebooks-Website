@@ -4,6 +4,7 @@ namespace App\Http\Requests\Admin;
 
 use App\Models\Book;
 use App\Rules\EbookFile;
+use App\Rules\StripeChargeableAmount;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -47,8 +48,8 @@ class BookRequest extends FormRequest
             'description' => ['required', 'string', 'max:10000'],
             'author_id' => ['required', 'integer', Rule::exists('authors', 'id')->whereNull('deleted_at')],
             'category_id' => ['required', 'integer', Rule::exists('categories', 'id')->whereNull('deleted_at')],
-            'price' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:9999.99'],
-            'sale_price' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'lt:price'],
+            'price' => ['required', 'numeric', 'decimal:0,2', 'min:0', 'max:9999.99', new StripeChargeableAmount],
+            'sale_price' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'lt:price', new StripeChargeableAmount],
             'page_count' => ['nullable', 'integer', 'min:1', 'max:100000'],
             'isbn' => ['nullable', 'string', 'max:20', 'regex:/^[0-9Xx\- ]+$/'],
             'published_at' => ['nullable', 'date'],

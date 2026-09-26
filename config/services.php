@@ -39,6 +39,8 @@ return [
         'webhook_tolerance' => (int) env('STRIPE_WEBHOOK_TOLERANCE', 300),
         // ISO currency code used for every order (lowercase, e.g. usd, eur, gbp).
         'currency' => strtolower((string) env('STRIPE_CURRENCY', 'usd')),
+        // Let Stripe Tax calculate tax on Checkout Sessions (configure Stripe Tax first).
+        'automatic_tax' => (bool) env('STRIPE_AUTOMATIC_TAX', false),
     ],
 
     'slack' => [
